@@ -1,0 +1,140 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function owns(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    function validProfile(userId) {
+      return request.resource.data.keys().hasOnly([
+        'uid', 'email', 'displayName', 'businessName', 'createdAt', 'updatedAt'
+      ])
+      && request.resource.data.uid == userId
+      && request.resource.data.email is string
+      && request.resource.data.email.size() <= 320
+      && request.resource.data.displayName is string
+      && request.resource.data.displayName.size() <= 120;
+    }
+
+    function validMovement() {
+      return request.resource.data.keys().hasOnly([
+        'type', 'concept', 'category', 'amount', 'date', 'invoice', 'method',
+        'notes', 'recipeId', 'quantity', 'createdAt', 'updatedAt'
+      ])
+      && request.resource.data.type in ['income', 'expense']
+      && request.resource.data.concept is string
+      && request.resource.data.concept.size() > 0
+      && request.resource.data.concept.size() <= 240
+      && request.resource.data.category is string
+      && request.resource.data.amount is number
+      && request.resource.data.amount > 0
+      && request.resource.data.date is string
+      && request.resource.data.date.matches('^\\d{4}-\\d{2}-\\d{2}$');
+    }
+
+    function validIngredient(ingredientId) {
+      return request.resource.data.keys().hasOnly([
+        'name', 'nameKey', 'unit', 'stock', 'min', 'cost', 'expiry', 'createdAt', 'updatedAt'
+      ])
+      && request.resource.data.name is string
+      && request.resource.data.name.size() > 0
+      && request.resource.data.name.size() <= 120
+      && (!('nameKey' in request.resource.data) || request.resource.data.nameKey == ingredientId)
+      && request.resource.data.unit in ['g', 'kg', 'ml', 'l', 'un']
+      && request.resource.data.stock is number
+      && request.resource.data.stock >= 0
+      && request.resource.data.min is number
+      && request.resource.data.min >= 0
+      && request.resource.data.cost is number
+      && request.resource.data.cost >= 0;
+    }
+
+    function validRecipe(recipeId) {
+      return request.resource.data.keys().hasOnly([
+        'name', 'nameKey', 'yield', 'price', 'labor', 'overhead', 'margin', 'ingredients',
+        'createdAt', 'updatedAt'
+      ])
+      && request.resource.data.name is string
+      && request.resource.data.name.size() > 0
+      && request.resource.data.name.size() <= 120
+      && (!('nameKey' in request.resource.data) || request.resource.data.nameKey == recipeId)
+      && request.resource.data.yield is number
+      && request.resource.data.yield > 0
+      && request.resource.data.price is number
+      && request.resource.data.price >= 0
+      && request.resource.data.labor is number
+      && request.resource.data.labor >= 0
+      && request.resource.data.overhead is number
+      && request.resource.data.overhead >= 0
+      && request.resource.data.margin is number
+      && request.resource.data.ingredients is list;
+    }
+
+    match /users/{userId} {
+      allow read: if owns(userId);
+      allow create: if owns(userId) && validProfile(userId)
+        && request.resource.data.createdAt == request.time;
+      allow update: if owns(userId) && validProfile(userId)
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if false;
+
+      match /movements/{movementId} {
+        allow read: if owns(userId);
+        allow create: if owns(userId) && validMovement()
+          && request.resource.data.createdAt == request.time;
+        allow update: if owns(userId) && validMovement()
+          && request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if owns(userId);
+      }
+
+      match /ingredients/{ingredientId} {
+        allow read: if owns(userId);
+        allow create: if owns(userId) && validIngredient(ingredientId)
+          && request.resource.data.createdAt == request.time;
+        allow update: if owns(userId) && validIngredient(ingredientId)
+          && request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if owns(userId);
+      }
+
+      match /recipes/{recipeId} {
+        allow read: if owns(userId);
+        allow create: if owns(userId) && validRecipe(recipeId)
+          && request.resource.data.createdAt == request.time;
+        allow update: if owns(userId) && validRecipe(recipeId)
+          && request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if owns(userId);
+      }
+
+      match /stockMovements/{stockMovementId} {
+        allow read: if owns(userId);
+        allow create: if owns(userId)
+          && request.resource.data.keys().hasOnly([
+            'ingredientId', 'ingredientName', 'direction', 'reason', 'recipeId',
+            'recipeName', 'quantity', 'unit', 'unitCost', 'totalCost', 'date',
+            'createdAt', 'updatedAt'
+          ])
+          && request.resource.data.direction in ['in', 'out']
+          && request.resource.data.quantity is number
+          && request.resource.data.quantity > 0
+          && request.resource.data.unitCost is number
+          && request.resource.data.totalCost is number
+          && request.resource.data.createdAt == request.time;
+        allow update, delete: if false;
+      }
+
+      match /{otherCollection}/{documentId} {
+        allow read, write: if false;
+      }
+    }
+
+    // Deny all documents outside the user's private workspace.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

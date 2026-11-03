@@ -19,7 +19,7 @@ export default function Auth({ onDemo }) {
     setMessage("");
     if (!firebaseConfigured) {
       setMessage(
-        "Firebase aún no está configurado. Podés entrar en modo de demostración.",
+        "Firebase aún no está configurado. Podés entrar en sesión local.",
       );
       return;
     }
@@ -72,14 +72,14 @@ export default function Auth({ onDemo }) {
             también <em>rinda.</em>
           </h1>
           <p>
-            Finanzas, recetas y stock en un solo lugar. Pensado para quienes
-            convierten buenos ingredientes en grandes momentos.
+            Finanzas, y stock en un solo lugar. Pensado para quienes
+            hacen rendir su emprendimiento.
           </p>
           <div className="auth-quote">
             <span>“</span>
             <div>
               <p>
-                Conocer el costo real de cada receta cambia la forma en que
+                Conocer el costo real cambia la forma en que
                 hacés crecer tu negocio.
               </p>
               <small>LEDGR · FINANZAS</small>
@@ -137,7 +137,7 @@ export default function Auth({ onDemo }) {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="vos@tupasteleria.com"
+                  placeholder="vos@tunegocio.com"
                 />
               </div>
             </label>
@@ -212,7 +212,7 @@ export default function Auth({ onDemo }) {
             <span /> o <span />
           </div>
           <button className="btn-secondary demo-button" onClick={onDemo}>
-            Explorar vista de demostración
+            Entrar sin cuenta (sesión local)
           </button>
           <p className="security-note">
             <LockKeyhole size={13} /> Tu contraseña está protegida por Firebase

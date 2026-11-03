@@ -73,8 +73,8 @@ export default function Sidebar({
               {(user?.email || "D").slice(0, 1).toUpperCase()}
             </div>
             <div className="profile-text">
-              <b>{user?.displayName || "Mi pastelería"}</b>
-              <small>{user?.email || "Modo de demostración"}</small>
+              <b>{user?.displayName || "Mi cuenta"}</b>
+              <small>{user?.email || "Sesión local"}</small>
             </div>
             <button
               className="icon-button"

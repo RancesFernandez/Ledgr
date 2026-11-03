@@ -23,14 +23,18 @@ export default function Reports({ movements, recipes, ingredients }) {
     expense = movements
       .filter((x) => x.type === "expense")
       .reduce((s, x) => s + Number(x.amount || 0), 0);
-  const chart = [
-    { month: "May", in: 24600, out: 15200 },
-    { month: "Jun", in: 28300, out: 17400 },
-    { month: "Jul", in: 26700, out: 16900 },
-    { month: "Ago", in: 31900, out: 19200 },
-    { month: "Set", in: 35600, out: 21700 },
-    { month: "Oct", in: income || 38200, out: expense || 22400 },
-  ];
+  const chart = movements.reduce((months, m) => {
+    const date = new Date(`${m.date}T12:00:00`);
+    if (Number.isNaN(date.getTime())) return months;
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+    let month = months.find((x) => x.key === key);
+    if (!month) {
+      month = { key, month: new Intl.DateTimeFormat("es-UY", { month: "short" }).format(date), in: 0, out: 0 };
+      months.push(month);
+    }
+    month[m.type === "income" ? "in" : "out"] += Number(m.amount || 0);
+    return months;
+  }, []).sort((a, b) => a.key.localeCompare(b.key)).slice(-6);
   const ranked = recipes
     .map((r) => ({
       name: r.name,
@@ -42,7 +46,7 @@ export default function Reports({ movements, recipes, ingredients }) {
     .sort((a, b) => b.profit - a.profit);
   const exportReport = () => {
     const rows = [
-      ["Reporte", "Dulce Balance"],
+      ["Reporte", "Ledgr"],
       ["Ingresos", income],
       ["Gastos", expense],
       ["Resultado", income - expense],
@@ -80,17 +84,17 @@ export default function Reports({ movements, recipes, ingredients }) {
       <div className="report-kpis">
         <div className="report-kpi">
           <span>Ingresos registrados</span>
-          <b>{money(income || 175400)}</b>
-          <small className="positive">↑ 12,8% vs. período anterior</small>
+          <b>{money(income)}</b>
+          <small>Según movimientos registrados</small>
         </div>
         <div className="report-kpi">
           <span>Egresos registrados</span>
-          <b>{money(expense || 102800)}</b>
-          <small className="negative">↓ 4,2% vs. período anterior</small>
+          <b>{money(expense)}</b>
+          <small>Según movimientos registrados</small>
         </div>
         <div className="report-kpi">
           <span>Resultado neto estimado</span>
-          <b>{money(income - expense || 72600)}</b>
+          <b>{money(income - expense)}</b>
           <small>
             <TrendingUp size={13} /> Resultado del período seleccionado
           </small>
@@ -105,7 +109,7 @@ export default function Reports({ movements, recipes, ingredients }) {
           <span className="chart-unit">UYU · pesos uruguayos</span>
         </div>
         <div className="report-chart">
-          <ResponsiveContainer width="100%" height="100%">
+          {chart.length ? <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={chart}
               barGap={7}
@@ -146,7 +150,7 @@ export default function Reports({ movements, recipes, ingredients }) {
                 radius={[5, 5, 0, 0]}
               />
             </BarChart>
-          </ResponsiveContainer>
+          </ResponsiveContainer> : <div className="empty-chart">El gráfico se completará cuando registres ingresos o gastos.</div>}
         </div>
       </section>
       <div className="report-bottom-grid">
@@ -212,11 +216,7 @@ export default function Reports({ movements, recipes, ingredients }) {
           </div>
         </section>
       </div>
-      <p className="report-disclaimer">
-        Los gráficos y variaciones de demostración se reemplazan por datos
-        reales al conectar Firebase. El resultado es una estimación operativa y
-        no sustituye la liquidación contable o tributaria.
-      </p>
+      
     </div>
   );
 }

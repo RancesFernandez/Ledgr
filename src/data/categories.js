@@ -1,0 +1,2 @@
+export const incomeCategories=['Ventas','Pedidos','Señas de clientes','Servicios','Otros ingresos'];
+export const expenseCategories=['Materia prima','Packaging','Servicios','Alquiler','Sueldos','Equipamiento','Marketing','Impuestos','Transporte','Otros gastos'];

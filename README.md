@@ -1,6 +1,6 @@
-# Dulce Balance
+# Ledgr
 
-Aplicación web para gestión financiera, inventario y costeo de pastelerías. Interfaz React + Vite, Firebase Authentication y Cloud Firestore.
+Aplicación web para gestión financiera, inventario, recetas y control de costos. Interfaz React + Vite, Firebase Authentication y Cloud Firestore.
 
 ## Requisitos
 - Node.js 20 o superior
@@ -25,8 +25,8 @@ Aplicación web para gestión financiera, inventario y costeo de pastelerías. I
 - Registro de compras y mermas desde inventario.
 - Recetario con ingredientes, rendimiento, mano de obra, costos fijos, precio y margen.
 - Estimación dinámica del costo de receta según los costos actuales de ingredientes.
-- Venta de receta con descuento proporcional del inventario por unidad y registro de ingreso.
-- Reportes, comparativas visuales y ranking estimado de rentabilidad.
+- Venta de receta con descuento proporcional del inventario por unidad, resumen de ingresos/costos/ganancia estimada y registro financiero.
+- Reportes calculados exclusivamente con los registros reales; empiezan en cero y se completan al registrar actividad.
 - Registro e inicio de sesión con Firebase; recuperación por correo.
 - Diseño responsive y componentes separados.
 
@@ -60,3 +60,4 @@ src/
   styles.css
 firestore.rules
 ```
+\n## Datos iniciales\nLa aplicación comienza sin movimientos, insumos ni recetas de muestra. Los indicadores y gráficos se mantienen en cero o muestran estados vacíos hasta que registres información. Para conservar los datos entre sesiones, configurá Firebase con las instrucciones anteriores.\n

@@ -1,3 +1,4 @@
+import { consumption, recipeCost, sellingPrice, isCountUnit } from "./utils/recipe";
 import React, { useEffect, useState } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { AlertCircle, Menu, Plus, Settings2 } from "lucide-react";
@@ -13,6 +14,8 @@ import {
   serverTimestamp,
   query,
   orderBy,
+  updateDoc,
+  deleteDoc,
 } from "firebase/firestore";
 import Sidebar from "./components/Sidebar";
 import Dashboard from "./components/Dashboard";
@@ -23,7 +26,6 @@ import Reports from "./components/Reports";
 import MovementModal from "./components/MovementModal";
 import RecordModal from "./components/RecordModal";
 import Auth from "./components/Auth";
-import { demoMovements, demoIngredients, demoRecipes } from "./data/demo";
 const titles = {
   dashboard: "Resumen general",
   movements: "Movimientos",
@@ -37,9 +39,10 @@ export default function App() {
     [active, setActive] = useState("dashboard"),
     [mobileOpen, setMobileOpen] = useState(false),
     [modal, setModal] = useState(""),
-    [movements, setMovements] = useState(demoMovements),
-    [ingredients, setIngredients] = useState(demoIngredients),
-    [recipes, setRecipes] = useState(demoRecipes),
+    [movements, setMovements] = useState([]),
+    [ingredients, setIngredients] = useState([]),
+    [recipes, setRecipes] = useState([]),
+    [recipeToEdit, setRecipeToEdit] = useState(null),
     [toast, setToast] = useState("");
   useEffect(() => {
     if (!auth) {
@@ -127,7 +130,7 @@ export default function App() {
       if (type === "movements") setMovements((p) => [item, ...p]);
       if (type === "ingredients") setIngredients((p) => [...p, item]);
       if (type === "recipes") setRecipes((p) => [...p, item]);
-      notify("Guardado en esta sesión de demostración.");
+      notify("Guardado en esta sesión local; configurá Firebase para conservar los datos.");
       return item;
     }
     try {
@@ -176,17 +179,138 @@ export default function App() {
     }
   }
   async function addMovement(data) {
-    await save("movements", data);
+    const purchase = data.inventoryPurchase;
+    if (!purchase) return save("movements", data);
+    const today = data.date || new Date().toISOString().slice(0, 10);
+    const normalized = String(purchase.name || "").normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80);
+    if (!normalized || !(Number(purchase.quantity) > 0) || !(Number(purchase.unitCost) > 0)) {
+      notify("Completá el artículo, la cantidad y el costo unitario.");
+      return null;
+    }
+    const { inventoryPurchase: _purchase, ...cleanData } = data;
+    const movementData = { ...cleanData, type: "expense", category: "Materia prima", amount: Number(purchase.totalCost) };
+    try {
+      if (isDemo) {
+        let item = ingredients.find((i) => i.id === (purchase.ingredientId || normalized) || String(i.name).trim().toLowerCase() === purchase.name.trim().toLowerCase());
+        if (item) {
+          const oldStock = Number(item.stock || 0), nextStock = oldStock + Number(purchase.quantity);
+          const avgCost = ((oldStock * Number(item.cost || 0)) + Number(purchase.totalCost)) / nextStock;
+          setIngredients((prev) => prev.map((i) => i.id === item.id ? { ...i, stock: nextStock, cost: avgCost } : i));
+        } else {
+          item = { id: normalized, name: purchase.name.trim(), unit: purchase.unit || "un", stock: Number(purchase.quantity), min: Number(purchase.min || 0), cost: Number(purchase.unitCost) };
+          setIngredients((prev) => [...prev, item]);
+        }
+        setMovements((prev) => [{ ...movementData, id: `movement-${Date.now()}` }, ...prev]);
+        notify("Compra registrada como gasto y stock actualizado.");
+        return movementData;
+      }
+      if (!user || !firebaseConfigured) throw new Error("Iniciá sesión para guardar la compra.");
+      await runTransaction(db, async (tx) => {
+        const ingredientId = purchase.ingredientId || normalized;
+        const ingredientRef = doc(db, "users", user.uid, "ingredients", ingredientId);
+        const ingredientSnap = await tx.get(ingredientRef);
+        let actualRef = ingredientRef;
+        let current = ingredientSnap.exists() ? ingredientSnap.data() : null;
+        const oldStock = Number(current?.stock || 0);
+        const nextStock = oldStock + Number(purchase.quantity);
+        if (isCountUnit(current?.unit || purchase.unit) && (!Number.isInteger(Number(purchase.quantity)) || !Number.isInteger(nextStock))) throw new Error("Las compras por unidades requieren cantidades enteras.");
+        const oldCost = Number(current?.cost || 0);
+        const averageCost = nextStock > 0 ? ((oldStock * oldCost) + Number(purchase.totalCost)) / nextStock : Number(purchase.unitCost);
+        if (current) {
+          tx.update(actualRef, { stock: nextStock, cost: averageCost, updatedAt: serverTimestamp() });
+        } else {
+          tx.set(actualRef, {
+            name: purchase.name.trim(), nameKey: normalized, unit: purchase.unit || "un",
+            stock: Number(purchase.quantity), min: Number(purchase.min || 0),
+            cost: Number(purchase.unitCost), expiry: "", createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+          });
+        }
+        const movementRef = doc(collection(db, "users", user.uid, "movements"));
+        tx.set(movementRef, { ...movementData, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+        const ledgerRef = doc(collection(db, "users", user.uid, "stockMovements"));
+        tx.set(ledgerRef, {
+          ingredientId: actualRef.id, ingredientName: purchase.name.trim(), direction: "in",
+          reason: "Compra", quantity: Number(purchase.quantity), unit: current?.unit || purchase.unit || "un",
+          unitCost: Number(purchase.unitCost), totalCost: Number(purchase.totalCost), date: today,
+          createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+        });
+      });
+      const [ingredientSnap, movementSnap] = await Promise.all([
+        getDocs(collection(db, "users", user.uid, "ingredients")),
+        getDocs(query(collection(db, "users", user.uid, "movements"), orderBy("createdAt", "desc"))),
+      ]);
+      setIngredients(ingredientSnap.docs.map((s) => ({ id: s.id, ...s.data() })));
+      setMovements(movementSnap.docs.map((s) => ({ id: s.id, ...s.data() })));
+      notify("Compra registrada como gasto del período y stock actualizado correctamente.");
+      return movementData;
+    } catch (e) {
+      notify("No se pudo registrar la compra: " + e.message);
+      return null;
+    }
   }
   async function addIngredient(data) {
-    await save("ingredients", data);
+    const { registerInitialExpense, ...ingredientData } = data;
+    const item = await save("ingredients", ingredientData);
+    if (!item || !registerInitialExpense) return item;
+    const amount = Number(ingredientData.stock || 0) * Number(ingredientData.cost || 0);
+    if (amount > 0) {
+      await save("movements", {
+        type: "expense",
+        concept: `Stock inicial de inventario: ${ingredientData.name}`,
+        category: "Materia prima",
+        amount: Number(amount.toFixed(2)),
+        date: new Date().toISOString().slice(0, 10),
+        invoice: "",
+        method: "Inventario",
+        notes: "Stock inicial marcado para registrar como gasto del período desde el inventario.",
+      });
+    }
+    return item;
   }
   async function addRecipe(data) {
-    await save("recipes", data);
+    return await save("recipes", data);
+  }
+  async function updateRecipe(data) {
+    const original = recipeToEdit;
+    if (!original) return;
+    if (isDemo) {
+      setRecipes((p) => p.map((r) => r.id === original.id ? { ...r, ...data, id: r.id } : r));
+      setRecipeToEdit(null);
+      notify("Receta actualizada en esta sesión local.");
+      return true;
+    }
+    try {
+      await updateDoc(doc(db, "users", user.uid, "recipes", original.id), {
+        ...data, name: String(data.name || "").trim(), updatedAt: serverTimestamp(),
+      });
+      setRecipes((p) => p.map((r) => r.id === original.id ? { ...r, ...data, id: r.id } : r));
+      setRecipeToEdit(null);
+      notify("Receta actualizada correctamente.");
+      return true;
+    } catch (e) {
+      notify("No se pudo editar la receta: " + e.message);
+      return null;
+    }
+  }
+  async function deleteRecipe(recipe) {
+    if (!window.confirm(`¿Eliminar la receta “${recipe.name}”? Las ventas y movimientos ya registrados se conservarán.`)) return;
+    if (isDemo) {
+      setRecipes((p) => p.filter((r) => r.id !== recipe.id));
+      notify("Receta eliminada de esta sesión.");
+      return;
+    }
+    try {
+      await deleteDoc(doc(db, "users", user.uid, "recipes", recipe.id));
+      setRecipes((p) => p.filter((r) => r.id !== recipe.id));
+      notify("Receta eliminada. Los movimientos históricos se conservaron.");
+    } catch (e) {
+      notify("No se pudo eliminar la receta: " + e.message);
+    }
   }
   async function adjustStock(id, qty, direction, cost, reason) {
     const item = ingredients.find((i) => i.id === id);
     if (!item || !Number.isFinite(qty) || qty <= 0) return;
+    if (isCountUnit(item.unit) && !Number.isInteger(qty)) { notify("Las unidades deben ajustarse con cantidades enteras."); return; }
     const today = new Date().toISOString().slice(0, 10);
     const unitCost = reason === "Compra" && direction === "in" && cost > 0 ? cost / qty : Number(item.cost || 0);
     try {
@@ -202,6 +326,7 @@ export default function App() {
           const current = snap.data();
           const stock = Number(current.stock || 0) + (direction === "in" ? qty : -qty);
           if (stock < 0) throw new Error(`Stock insuficiente de ${current.name}.`);
+          if (isCountUnit(current.unit) && (!Number.isInteger(qty) || !Number.isInteger(stock))) throw new Error(`El stock de ${current.name} debe expresarse en unidades enteras.`);
           tx.update(ingredientRef, {
             stock,
             cost: reason === "Compra" && direction === "in" && cost > 0 ? unitCost : Number(current.cost || 0),
@@ -254,26 +379,33 @@ export default function App() {
       notify("No se pudo actualizar el inventario: " + e.message);
     }
   }
-  async function sellRecipe(r) {
+  async function sellRecipe(r, quantity = 1) {
     if (!r || !(Number(r.yield) > 0)) { notify("La receta necesita un rendimiento válido."); return; }
-    if (!(Number(r.price) > 0)) { notify("Definí un precio de venta mayor que cero antes de registrar la venta."); return; }
+    if (!(sellingPrice(r, ingredients) > 0)) { notify("Definí un precio de venta mayor que cero antes de registrar la venta."); return; }
     const today = new Date().toISOString().slice(0, 10);
-    const qty = 1;
+    const qty = Math.max(1, Math.floor(Number(quantity) || 1));
     const needed = (r.ingredients || []).filter((x) => Number(x.qty) > 0);
+    const ingredientBatchCost = needed.reduce((sum, line) => sum + Number(ingredients.find((i) => i.id === line.id)?.cost || 0) * Number(line.qty || 0), 0);
+    const laborCost = Number(r.labor || 0);
+    const unitCostEstimate = recipeCost(r, ingredients) / Math.max(1, Number(r.yield));
+    const totalRevenue = sellingPrice(r, ingredients) * qty;
+    const totalEstimatedCost = unitCostEstimate * qty;
+    const estimatedProfit = totalRevenue - totalEstimatedCost;
     if (!needed.length) { notify("Agregá ingredientes a la receta antes de venderla."); return; }
     try {
       if (isDemo) {
         const updates = [];
         for (const line of needed) {
           const ing = ingredients.find((i) => i.id === line.id);
-          if (!ing || Number(ing.stock || 0) < Number(line.qty) / Number(r.yield)) {
+          if (!ing) { notify("Ingrediente inexistente."); return; }
+          if (isCountUnit(ing.unit) && !Number.isInteger(Number(ing.stock))) throw new Error(`El stock de ${ing.name} contiene decimales; corregilo antes de vender.`);
+          if (Number(ing.stock || 0) < consumption(line, ing, qty, r.yield)) {
             notify(`Stock insuficiente de ${ing?.name || "un ingrediente"}.`); return;
           }
-          updates.push({ ...ing, stock: Number(ing.stock) - Number(line.qty) / Number(r.yield) });
+          updates.push({ ...ing, stock: Number(ing.stock) - consumption(line, ing, qty, r.yield) });
         }
         setIngredients((prev) => prev.map((ing) => updates.find((u) => u.id === ing.id) || ing));
-        const unitCost = needed.reduce((sum, line) => sum + Number(ingredients.find((i) => i.id === line.id)?.cost || 0) * Number(line.qty), 0) / Number(r.yield);
-        setMovements((prev) => [{ id: `sale-${Date.now()}`, type: "income", concept: `Venta: ${r.name}`, category: "Ventas", amount: Number(r.price || 0), date: today, invoice: "", method: "Venta directa", notes: `Costo estimado de ingredientes: ${unitCost.toFixed(2)}` }, ...prev]);
+        setMovements((prev) => [{ id: `sale-${Date.now()}`, type: "income", concept: `Venta: ${r.name} × ${qty}`, category: "Ventas", amount: totalRevenue, date: today, invoice: "", method: "Venta directa", notes: `Costo estimado: ${totalEstimatedCost.toFixed(2)} UYU · Ganancia estimada: ${estimatedProfit.toFixed(2)} UYU · Incluye ingredientes, mano de obra y costos fijos.` }, ...prev]);
       } else {
         await runTransaction(db, async (tx) => {
           const refs = needed.map((line) => ({ line, ref: doc(db, "users", user.uid, "ingredients", line.id) }));
@@ -282,13 +414,14 @@ export default function App() {
           const lines = refs.map((item, index) => {
             if (!snaps[index].exists()) throw new Error("Un ingrediente de la receta ya no existe.");
             const ingredient = snaps[index].data();
-            const amount = Number(item.line.qty) * qty / Number(r.yield);
+            const amount = consumption(item.line, ingredient, qty, r.yield);
+            if (isCountUnit(ingredient.unit) && !Number.isInteger(Number(ingredient.stock))) throw new Error(`El stock de ${ingredient.name} contiene decimales; corregilo antes de vender.`);
             if (!Number.isFinite(amount) || amount <= 0) throw new Error("La receta contiene cantidades inválidas.");
             if (Number(ingredient.stock || 0) < amount) throw new Error(`Stock insuficiente de ${ingredient.name}.`);
             return { ...item, ingredient, amount };
           });
           for (const line of lines) {
-            tx.update(line.ref, { stock: Number(line.ingredient.stock || 0) - line.amount, updatedAt: serverTimestamp() });
+            tx.update(line.ref, { stock: isCountUnit(line.ingredient.unit) ? Number(line.ingredient.stock || 0) - line.amount : Math.round((Number(line.ingredient.stock || 0) - line.amount) * 1e8) / 1e8, updatedAt: serverTimestamp() });
             const ledgerRef = doc(collection(db, "users", user.uid, "stockMovements"));
             tx.set(ledgerRef, {
               ingredientId: line.line.id,
@@ -309,9 +442,9 @@ export default function App() {
           const movementRef = doc(collection(db, "users", user.uid, "movements"));
           tx.set(movementRef, {
             type: "income", concept: `Venta: ${r.name}`, category: "Ventas",
-            amount: Number(r.price || 0) * qty, date: today, invoice: "",
-            method: "Venta directa", notes: `Venta de ${qty} unidad(es) de ${r.name}`,
-            recipeId: r.id, quantity: qty, createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+            amount: totalRevenue, date: today, invoice: "",
+            method: "Venta directa", notes: `Costo estimado: ${totalEstimatedCost.toFixed(2)} UYU · Ganancia estimada: ${estimatedProfit.toFixed(2)} UYU · Incluye ingredientes, mano de obra y costos fijos.`,
+            estimatedCost: totalEstimatedCost, estimatedProfit, recipeId: r.id, quantity: qty, createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
           });
         });
         const [ingredientSnap, movementSnap] = await Promise.all([
@@ -341,9 +474,9 @@ export default function App() {
       </div>
     );
   if (!isDemo && !user) return <Auth onDemo={() => {
-    setMovements(demoMovements);
-    setIngredients(demoIngredients);
-    setRecipes(demoRecipes);
+    setMovements([]);
+    setIngredients([]);
+    setRecipes([]);
     setDemo(true);
   }} />;
   const content =
@@ -367,7 +500,9 @@ export default function App() {
       <Recipes
         recipes={recipes}
         ingredients={ingredients}
-        onAdd={() => setModal("recipe")}
+        onAdd={() => { setRecipeToEdit(null); setModal("recipe"); }}
+        onEdit={(recipe) => { setRecipeToEdit(recipe); setModal("recipe"); }}
+        onDelete={deleteRecipe}
         onSell={sellRecipe}
       />
     ) : (
@@ -401,15 +536,7 @@ export default function App() {
             </span>
           </div>
           <div className="topbar-right">
-            {isDemo && (
-              <span className="demo-indicator">
-                <i /> DEMO
-              </span>
-            )}
             <div className="topbar-date">{new Intl.DateTimeFormat("es-UY", { weekday: "short", day: "numeric", month: "short", year: "numeric" }).format(new Date())}</div>
-            <div className="topbar-avatar">
-              {(user?.email || "D").slice(0, 1).toUpperCase()}
-            </div>
           </div>
         </header>
         {isDemo && (
@@ -432,14 +559,16 @@ export default function App() {
         {content}
       </main>
       {modal === "movement" && (
-        <MovementModal onClose={() => setModal("")} onSave={addMovement} />
+        <MovementModal onClose={() => setModal("")} onSave={addMovement} ingredients={ingredients} />
       )}
       {(modal === "recipe" || modal === "ingredient") && (
         <RecordModal
           kind={modal}
           ingredients={ingredients}
           onClose={() => setModal("")}
-          onSave={modal === "recipe" ? addRecipe : addIngredient}
+          onSave={modal === "recipe" ? (recipeToEdit ? updateRecipe : addRecipe) : addIngredient}
+          initialData={modal === "recipe" ? recipeToEdit : null}
+          userId={user?.uid || ""}
         />
       )}
       {toast && (

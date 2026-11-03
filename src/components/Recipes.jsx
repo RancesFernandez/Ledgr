@@ -1,25 +1,42 @@
+import { usePagination } from "./Pagination";
+import {
+  recipeCost as calculateRecipeCost,
+  sellingPrice,
+} from "../utils/recipe";
 import React, { useState } from "react";
-import { ChefHat, Clock3, Plus, Search, SlidersHorizontal } from "lucide-react";
+import {
+  ChefHat,
+  Clock3,
+  Plus,
+  Search,
+  SlidersHorizontal,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 const money = (n) =>
   new Intl.NumberFormat("es-UY", {
     style: "currency",
     currency: "UYU",
     maximumFractionDigits: 0,
   }).format(n || 0);
-export function recipeCost(r, ingredients) {
-  const ingredientCost = (r.ingredients || []).reduce(
-    (s, x) => s + (ingredients.find((i) => i.id === x.id)?.cost || 0) * x.qty,
-    0,
-  );
-  const labor = Number(r.labor || 0);
-  const overhead = ((ingredientCost + labor) * Number(r.overhead || 0)) / 100;
-  return ingredientCost + labor + overhead;
-}
-export default function Recipes({ recipes, ingredients, onAdd, onSell }) {
+export const recipeCost = calculateRecipeCost;
+export default function Recipes({
+  recipes,
+  ingredients,
+  onAdd,
+  onSell,
+  onEdit,
+  onDelete,
+}) {
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [sale, setSale] = useState(null);
+  const [saleQty, setSaleQty] = useState(1);
   const rows = recipes.filter((r) =>
     r.name.toLowerCase().includes(search.toLowerCase()),
   );
+  const pagination = usePagination(rows, page, setPage, pageSize, setPageSize);
   return (
     <div className="page-content">
       <div className="welcome-row">
@@ -63,7 +80,7 @@ export default function Recipes({ recipes, ingredients, onAdd, onSell }) {
         </button>
       </div>
       <div className="recipe-grid">
-        {rows.map((r, idx) => {
+        {pagination.items.map((r, idx) => {
           const ing = (r.ingredients || []).reduce(
             (s, x) =>
               s + (ingredients.find((i) => i.id === x.id)?.cost || 0) * x.qty,
@@ -72,26 +89,33 @@ export default function Recipes({ recipes, ingredients, onAdd, onSell }) {
           const cost = recipeCost(r, ingredients);
           const overhead = ((ing + (r.labor || 0)) * (r.overhead || 0)) / 100;
           const unit = cost / Math.max(1, r.yield || 1);
-          const profit = (r.price || 0) - unit;
-          const margin = r.price ? (profit / r.price) * 100 : 0;
+          const price = sellingPrice(r, ingredients);
+          const profit = price - unit;
+          const margin = price ? (profit / price) * 100 : 0;
           return (
             <article className="recipe-card" key={r.id}>
               <div className={`recipe-art art-${idx % 3}`}>
-                <div className="recipe-art-label">
-                  RECETA {String(idx + 1).padStart(2, "0")}
-                </div>
-                <div className="recipe-illustration">
-                  {["◒", "✳", "◉"][idx % 3]}
-                </div>
-                <div className="recipe-yield">
-                  <span>Rinde</span>
-                  <b>{r.yield} porciones</b>
-                </div>
+                {r.imageUrl ? (
+                  <img
+                    className="recipe-card-image"
+                    src={r.imageUrl}
+                    alt={`Imagen de ${r.name}`}
+                  />
+                ) : null}
+
+                {!r.imageUrl && (
+                  <div className="recipe-illustration">
+                    {["◒", "✳", "◉"][idx % 3]}
+                  </div>
+                )}
               </div>
               <div className="recipe-card-body">
                 <div className="recipe-title-row">
                   <h2>{r.name}</h2>
-                  <span className="margin-badge">
+                  <span
+                    className="margin-badge"
+                    title="Porcentaje de ganancia sobre el precio de venta."
+                  >
                     {margin.toFixed(0)}% margen
                   </span>
                 </div>
@@ -106,8 +130,11 @@ export default function Recipes({ recipes, ingredients, onAdd, onSell }) {
                   </div>
                   <div>
                     <span>Precio sugerido</span>
-                    <b className="price-highlight">
-                      {money(r.price || unit * 3)}
+                    <b
+                      className="price-highlight"
+                      title="Precio exacto que definiste para vender cada unidad."
+                    >
+                      {money(price)}
                     </b>
                   </div>
                 </div>
@@ -122,9 +149,32 @@ export default function Recipes({ recipes, ingredients, onAdd, onSell }) {
                   <span>
                     <Clock3 size={14} /> Mano de obra {money(r.labor)}
                   </span>
-                  <button className="btn-small" onClick={() => onSell(r)}>
-                    Registrar venta
-                  </button>
+                  <div className="recipe-actions">
+                    <button
+                      className="btn-small"
+                      title="Editar nombre, costos, ingredientes, precio o imagen"
+                      onClick={() => onEdit(r)}
+                    >
+                      <Pencil size={14} /> Editar
+                    </button>
+                    <button
+                      className="btn-small recipe-delete"
+                      title="Eliminar esta receta. Las ventas ya registradas no se borran."
+                      onClick={() => onDelete(r)}
+                    >
+                      <Trash2 size={14} /> Eliminar
+                    </button>
+                    <button
+                      className="btn-small"
+                      title="Registrar una venta y calcular su ingreso y ganancia"
+                      onClick={() => {
+                        setSale(r);
+                        setSaleQty(1);
+                      }}
+                    >
+                      Registrar venta
+                    </button>
+                  </div>
                 </div>
               </div>
             </article>
@@ -138,6 +188,102 @@ export default function Recipes({ recipes, ingredients, onAdd, onSell }) {
           <span>Creá una receta para calcular costos y márgenes.</span>
         </div>
       )}
+      {sale &&
+        (() => {
+          const batchCost = recipeCost(sale, ingredients);
+          const unitCost = batchCost / Math.max(1, Number(sale.yield) || 1);
+          const unitPrice = sellingPrice(sale, ingredients);
+          const total = unitPrice * saleQty;
+          const totalCost = unitCost * saleQty;
+          const profit = total - totalCost;
+          return (
+            <div
+              className="modal-scrim"
+              onMouseDown={(e) => e.target === e.currentTarget && setSale(null)}
+            >
+              <section className="modal sale-summary-modal">
+                <div className="modal-head">
+                  <div>
+                    <p className="eyebrow">RESUMEN DE VENTA</p>
+                    <h2>{sale.name}</h2>
+                    <p className="muted">
+                      Estimación según los costos registrados en la receta.
+                    </p>
+                  </div>
+                  <button
+                    className="icon-button"
+                    onClick={() => setSale(null)}
+                    aria-label="Cerrar"
+                  >
+                    ×
+                  </button>
+                </div>
+                <label data-tooltip="Cantidad de unidades vendidas.">
+                  Cantidad de unidades
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={saleQty}
+                    onChange={(e) =>
+                      setSaleQty(Math.max(1, Number(e.target.value) || 1))
+                    }
+                  />
+                </label>
+                <div className="sale-summary-grid">
+                  <div>
+                    <span>Ingreso total</span>
+                    <b>{money(total)}</b>
+                  </div>
+                  <div>
+                    <span>Costo estimado total</span>
+                    <b>{money(totalCost)}</b>
+                  </div>
+                  <div>
+                    <span>Ganancia estimada</span>
+                    <b className={profit >= 0 ? "positive" : "negative"}>
+                      {money(profit)}
+                    </b>
+                  </div>
+                  <div>
+                    <span>Margen estimado</span>
+                    <b>
+                      {total > 0
+                        ? ((profit / total) * 100).toLocaleString("es-UY", {
+                            maximumFractionDigits: 1,
+                          })
+                        : "0"}
+                      %
+                    </b>
+                  </div>
+                </div>
+                <p className="muted sale-cost-detail">
+                  Costo unitario: {money(unitCost)} · Precio unitario:{" "}
+                  {money(unitPrice)}. El costo incluye ingredientes, mano de
+                  obra y costos fijos configurados.
+                </p>
+                <div className="modal-actions">
+                  <button
+                    className="btn-secondary"
+                    onClick={() => setSale(null)}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    className="btn-primary"
+                    onClick={() => {
+                      onSell(sale, saleQty);
+                      setSale(null);
+                    }}
+                  >
+                    Confirmar venta
+                  </button>
+                </div>
+              </section>
+            </div>
+          );
+        })()}
+      {pagination.controls}
     </div>
   );
 }

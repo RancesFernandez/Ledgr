@@ -33,21 +33,27 @@ export default function Dashboard({
   onAdd,
   onNavigate,
 }) {
-  const income = movements
-      .filter((x) => x.type === "income")
-      .reduce((s, x) => s + Number(x.amount || 0), 0),
-    expenses = movements
-      .filter((x) => x.type === "expense")
-      .reduce((s, x) => s + Number(x.amount || 0), 0);
-  const chart = [
-    { day: "Lun", income: 3200, expense: 1400 },
-    { day: "Mar", income: 4700, expense: 2100 },
-    { day: "Mié", income: 3900, expense: 1800 },
-    { day: "Jue", income: 6100, expense: 2700 },
-    { day: "Vie", income: 5200, expense: 1900 },
-    { day: "Sáb", income: 7800, expense: 3100 },
-    { day: "Dom", income: income || 2100, expense: expenses || 1200 },
-  ];
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const periodMovements = movements.filter((x) => String(x.date || "").startsWith(currentMonth));
+  const income = periodMovements.filter((x) => x.type === "income").reduce((s, x) => s + Number(x.amount || 0), 0);
+  const expenses = periodMovements.filter((x) => x.type === "expense").reduce((s, x) => s + Number(x.amount || 0), 0);
+  const net = income - expenses;
+  const chart = movements
+    .filter((m) => {
+      const date = new Date(`${m.date}T12:00:00`);
+      return !Number.isNaN(date.getTime()) && (Date.now() - date.getTime()) <= 7 * 86400000;
+    })
+    .reduce((days, m) => {
+      const key = m.date;
+      let day = days.find((x) => x.date === key);
+      if (!day) {
+        day = { date: key, day: new Intl.DateTimeFormat("es-UY", { weekday: "short" }).format(new Date(`${key}T12:00:00`)), income: 0, expense: 0 };
+        days.push(day);
+      }
+      day[m.type === "income" ? "income" : "expense"] += Number(m.amount || 0);
+      return days;
+    }, [])
+    .sort((a, b) => a.date.localeCompare(b.date));
   const alerts = ingredients.filter((i) => Number(i.stock) < Number(i.min));
   const costs = recipes
     .map((r) => ({
@@ -64,10 +70,10 @@ export default function Dashboard({
     <div className="page-content">
       <div className="welcome-row">
         <div>
-          <p className="eyebrow">JUEVES, 29 DE OCTUBRE DE 2026</p>
+          <p className="eyebrow">{new Intl.DateTimeFormat("es-UY", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date()).toLocaleUpperCase("es-UY")}</p>
           <h1>Tu negocio, en perspectiva.</h1>
           <p className="muted">
-            Un vistazo claro a cómo está funcionando tu pastelería.
+            Un vistazo claro a la actividad de tu negocio.
           </p>
         </div>
         <div className="welcome-actions">
@@ -82,40 +88,18 @@ export default function Dashboard({
           </button>
         </div>
       </div>
-      <div className="stat-grid">
-        <StatCard
-          label="Ingresos registrados"
-          value={money(income || 21900)}
-          change="+12,8%"
-          note="vs. período anterior"
-          icon={ArrowDownLeft}
-          tone="mint"
-        />
-        <StatCard
-          label="Gastos registrados"
-          value={money(expenses || 8470)}
-          change="-4,2%"
-          note="vs. período anterior"
-          icon={ArrowUpRight}
-          tone="rose"
-        />
-        <StatCard
-          label="Resultado del período"
-          value={money(income - expenses || 13430)}
-          change="+18,4%"
-          note="resultado operativo"
-          icon={Wallet}
-          tone="lilac"
-        />
-        <StatCard
-          label="Margen estimado"
-          value="61,3%"
-          change="+2,1 pts"
-          note="sobre ingresos"
-          icon={TrendingUp}
-          tone="sand"
-        />
-      </div>
+      <section className="period-summary" aria-label="Resumen financiero del mes">
+        <div className="period-summary-heading">
+          <div><h2>Ingresos y gastos del período</h2><p>Resumen de {new Intl.DateTimeFormat("es-UY", { month: "long", year: "numeric" }).format(new Date())}. Los movimientos fuera de este mes no se incluyen.</p></div>
+          <button className="text-action" onClick={() => onNavigate("movements")}>Ver movimientos →</button>
+        </div>
+        <div className="period-summary-values">
+          <div className="period-value income-value"><span><i/>Ingresos</span><strong>{money(income)}</strong><small>{periodMovements.filter((x) => x.type === "income").length} movimientos</small></div>
+          <div className="period-value expense-value"><span><i/>Gastos</span><strong>{money(expenses)}</strong><small>{periodMovements.filter((x) => x.type === "expense").length} movimientos</small></div>
+          <div className={`period-value result-value ${net < 0 ? "negative-result" : ""}`}><span><i/>Resultado del período</span><strong>{money(net)}</strong><small>{net >= 0 ? "Ingresos menos gastos" : "Los gastos superan los ingresos"}</small></div>
+          <div className="period-value margin-value"><span><i/>Margen sobre ingresos</span><strong>{income > 0 ? `${((net / income) * 100).toLocaleString("es-UY", { maximumFractionDigits: 1 })}%` : "—"}</strong><small>Resultado ÷ ingresos</small></div>
+        </div>
+      </section>
       <div className="dashboard-grid">
         <section className="panel cashflow-panel">
           <div className="panel-heading">
@@ -139,7 +123,7 @@ export default function Dashboard({
             </span>
           </div>
           <div className="chart-wrap">
-            <ResponsiveContainer width="100%" height="100%">
+            {chart.length ? <ResponsiveContainer width="100%" height="100%">
               <AreaChart
                 data={chart}
                 margin={{ top: 10, right: 4, left: -18, bottom: 0 }}
@@ -193,7 +177,7 @@ export default function Dashboard({
                   fill="url(#expenseFill)"
                 />
               </AreaChart>
-            </ResponsiveContainer>
+            </ResponsiveContainer> : <div className="empty-chart">Los movimientos de los últimos 7 días aparecerán aquí.</div>}
           </div>
         </section>
         <section className="panel alert-panel">
@@ -202,22 +186,10 @@ export default function Dashboard({
               <h2>Para tener en cuenta</h2>
               <p className="muted">Pequeños avisos, grandes diferencias.</p>
             </div>
-            <span className="alert-count">{alerts.length || 2}</span>
+            <span className="alert-count">{alerts.length}</span>
           </div>
           <div className="alert-list">
-            {(alerts.length
-              ? alerts
-              : [
-                  {
-                    id: "a",
-                    name: "Manteca",
-                    stock: 750,
-                    min: 1000,
-                    unit: "g",
-                  },
-                  { id: "b", name: "Huevos", stock: 12, min: 24, unit: "un" },
-                ]
-            ).map((a, i) => (
+            {alerts.map((a, i) => (
               <div className="alert-item" key={a.id}>
                 <div className={`alert-icon ${i ? "expiry" : "stock"}`}>
                   {i === 0 ? "!" : "◷"}
@@ -238,6 +210,7 @@ export default function Dashboard({
                 </button>
               </div>
             ))}
+            {!alerts.length && <p className="muted empty-inline">Todavía no hay alertas. Al registrar insumos se mostrarán aquí.</p>}
           </div>
           <button
             className="panel-link"
@@ -299,6 +272,7 @@ export default function Dashboard({
                     </td>
                   </tr>
                 ))}
+                {!movements.length && <tr><td colSpan="4" className="empty-table">Todavía no registraste movimientos.</td></tr>}
               </tbody>
             </table>
           </div>
@@ -339,11 +313,8 @@ export default function Dashboard({
         </section>
       </div>
       <footer className="app-footer">
-        <span>
-          Dulce Balance <i>·</i> Hecho para que los números también salgan
-          dulces.
-        </span>
-        <span>UYU · Uruguay</span>
+        
+        
       </footer>
     </div>
   );

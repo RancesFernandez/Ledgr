@@ -1,3 +1,4 @@
+import { usePagination } from "./Pagination";
 import React, { useMemo, useState } from "react";
 import {
   ArrowDownLeft,
@@ -15,6 +16,8 @@ const money = (n) =>
   }).format(n || 0);
 export default function Movements({ movements, onAdd }) {
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [filter, setFilter] = useState("all");
   const filtered = useMemo(
     () =>
@@ -52,6 +55,7 @@ export default function Movements({ movements, onAdd }) {
     a.click();
     URL.revokeObjectURL(a.href);
   };
+  const pagination = usePagination(filtered, page, setPage, pageSize, setPageSize);
   return (
     <div className="page-content">
       <div className="welcome-row">
@@ -119,7 +123,7 @@ export default function Movements({ movements, onAdd }) {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((m) => (
+              {pagination.items.map((m) => (
                 <tr key={m.id}>
                   <td>
                     <div className="transaction-name">
@@ -163,6 +167,7 @@ export default function Movements({ movements, onAdd }) {
           <span>Importes en pesos uruguayos (UYU)</span>
         </div>
       </div>
+      {pagination.controls}
     </div>
   );
 }

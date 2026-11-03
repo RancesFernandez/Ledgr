@@ -1,3 +1,4 @@
+import { usePagination } from "./Pagination";
 import React, { useState } from "react";
 import {
   AlertTriangle,
@@ -16,6 +17,8 @@ const money = (n) =>
   }).format(n || 0);
 export default function Inventory({ ingredients, onAdjust, onAdd }) {
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [adjust, setAdjust] = useState(null);
   const [qty, setQty] = useState("");
   const [cost, setCost] = useState("");
@@ -38,6 +41,7 @@ export default function Inventory({ ingredients, onAdjust, onAdd }) {
       setCost("");
     }
   };
+  const pagination = usePagination(visible, page, setPage, pageSize, setPageSize);
   return (
     <div className="page-content">
       <div className="welcome-row">
@@ -109,7 +113,7 @@ export default function Inventory({ ingredients, onAdjust, onAdd }) {
               </tr>
             </thead>
             <tbody>
-              {visible.map((i) => (
+              {pagination.items.map((i) => (
                 <tr key={i.id}>
                   <td>
                     <div className="ingredient-name">
@@ -196,7 +200,7 @@ export default function Inventory({ ingredients, onAdjust, onAdd }) {
               </button>
             </div>
             <form onSubmit={submit}>
-              <label>
+              <label data-tooltip="Elegí el insumo al que corresponde este movimiento.">
                 Insumo
                 <select
                   value={adjust.id || ""}
@@ -211,7 +215,7 @@ export default function Inventory({ ingredients, onAdjust, onAdd }) {
                   ))}
                 </select>
               </label>
-              <label>
+              <label data-tooltip="Indicá si el stock entra, sale o se corrige.">
                 Tipo de movimiento
                 <select
                   value={reason}
@@ -228,7 +232,7 @@ export default function Inventory({ ingredients, onAdjust, onAdd }) {
                   ))}
                 </select>
               </label>
-              <label>
+              <label data-tooltip="Cantidad de unidades que se agregan o descuentan.">
                 Cantidad (
                 {ingredients.find((i) => i.id === adjust.id)?.unit || "un"})
                 <input
@@ -241,7 +245,7 @@ export default function Inventory({ ingredients, onAdjust, onAdd }) {
                   placeholder="0"
                 />
               </label>
-              <label>
+              <label data-tooltip="Importe total de la compra, si corresponde.">
                 Costo total del movimiento (UYU)
                 <input
                   type="number"
@@ -266,6 +270,7 @@ export default function Inventory({ ingredients, onAdjust, onAdd }) {
           </section>
         </div>
       )}
+      {pagination.controls}
     </div>
   );
 }

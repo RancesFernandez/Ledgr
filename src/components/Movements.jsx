@@ -1,4 +1,5 @@
 import { usePagination } from "./Pagination";
+import { exportStyledWorkbook } from "../utils/exportExcel";
 import React, { useMemo, useState } from "react";
 import {
   ArrowDownLeft,
@@ -31,29 +32,13 @@ export default function Movements({ movements, onAdd }) {
     [movements, search, filter],
   );
   const exportCsv = () => {
-    const csv = [
-      "Fecha,Tipo,Concepto,Categoría,Monto,Factura,Método",
-      ...filtered.map((m) =>
-        [
-          m.date,
-          m.type,
-          m.concept,
-          m.category,
-          m.amount,
-          m.invoice || "",
-          m.method || "",
-        ]
-          .map((x) => `"${String(x).replaceAll('"', '""')}"`)
-          .join(","),
-      ),
-    ].join("\n");
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(
-      new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" }),
-    );
-    a.download = "movimientos-dulce-balance.csv";
-    a.click();
-    URL.revokeObjectURL(a.href);
+    const rows = [
+      [{value:"LEDGR · MOVIMIENTOS",style:"title",mergeAcross:6}],
+      [{value:`Exportado el ${new Date().toLocaleDateString("es-UY")} · Importes en UYU`,style:"subtitle",mergeAcross:6}],
+      ["Fecha", "Tipo", "Concepto", "Categoría", "Monto (UYU)", "Comprobante", "Método"].map(value=>({value,style:"header"})),
+      ...filtered.map(m=>[m.date||"",m.type==="income"?"Ingreso":"Egreso",m.concept||"",m.category||"",{value:Number(m.amount||0),style:"money"},m.invoice||"",m.method||""].map(v=>typeof v==="object"?v:{value:v,style:"text"}))
+    ];
+    exportStyledWorkbook("ledgr-movimientos", [{name:"Movimientos",rows,widths:[90,65,220,110,110,120,110]}]);
   };
   const pagination = usePagination(filtered, page, setPage, pageSize, setPageSize);
   return (
@@ -66,7 +51,7 @@ export default function Movements({ movements, onAdd }) {
         </div>
         <div className="welcome-actions">
           <button className="btn-secondary" onClick={exportCsv}>
-            <Download size={16} /> Exportar CSV
+            <Download size={16} /> Exportar Excel
           </button>
           <button className="btn-primary" onClick={onAdd}>
             <Plus size={17} /> Nuevo movimiento

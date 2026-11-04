@@ -10,6 +10,8 @@ import {
   YAxis,
 } from "recharts";
 import { recipeCost } from "./Recipes";
+import { sellingPrice } from "../utils/recipe";
+import { exportStyledWorkbook } from "../utils/exportExcel";
 const money = (n) =>
   new Intl.NumberFormat("es-UY", {
     style: "currency",
@@ -39,33 +41,43 @@ export default function Reports({ movements, recipes, ingredients }) {
     .map((r) => ({
       name: r.name,
       cost: recipeCost(r, ingredients) / Math.max(1, r.yield),
-      price: r.price || 0,
+      price: sellingPrice(r, ingredients),
       profit:
-        (r.price || 0) - recipeCost(r, ingredients) / Math.max(1, r.yield),
+        sellingPrice(r, ingredients) - recipeCost(r, ingredients) / Math.max(1, r.yield),
     }))
     .sort((a, b) => b.profit - a.profit);
   const exportReport = () => {
-    const rows = [
-      ["Reporte", "Ledgr"],
-      ["Ingresos", income],
-      ["Gastos", expense],
-      ["Resultado", income - expense],
-      [],
-      ["Producto", "Costo unitario", "Precio", "Ganancia estimada"],
-      ...ranked.map((r) => [r.name, r.cost, r.price, r.profit]),
+    const date = new Date().toLocaleDateString("es-UY");
+    const movementRows = [
+      [{value:"LEDGR · REPORTE FINANCIERO",style:"title",mergeAcross:6}],
+      [{value:`Exportado el ${date} · Importes en pesos uruguayos (UYU)`,style:"subtitle",mergeAcross:6}],
+      ["Fecha", "Tipo", "Concepto", "Categoría", "Monto (UYU)", "Comprobante", "Método"].map(value=>({value,style:"header"})),
+      ...movements.map(m=>[m.date || "", m.type === "income" ? "Ingreso" : "Egreso", m.concept || "", m.category || "", {value:Number(m.amount||0),style:"money"}, m.invoice || "", m.method || ""] .map((v)=>typeof v === "object" ? v : {value:v,style:"text"})),
+      [{value:"TOTAL INGRESOS",style:"total"},{value:"",style:"total"},{value:"",style:"total"},{value:"",style:"total"},{value:income,style:"money"},{value:"",style:"total"},{value:"",style:"total"}],
+      [{value:"TOTAL EGRESOS",style:"total"},{value:"",style:"total"},{value:"",style:"total"},{value:"",style:"total"},{value:expense,style:"money"},{value:"",style:"total"},{value:"",style:"total"}],
+      [{value:"RESULTADO NETO",style:"total"},{value:"",style:"total"},{value:"",style:"total"},{value:"",style:"total"},{value:income-expense,style:"money"},{value:"",style:"total"},{value:"",style:"total"}],
     ];
-    const csv = rows
-      .map((r) =>
-        r.map((x) => `"${String(x ?? "").replaceAll('"', '""')}"`).join(","),
-      )
-      .join("\n");
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(
-      new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" }),
-    );
-    a.download = "reporte-dulce-balance.csv";
-    a.click();
-    URL.revokeObjectURL(a.href);
+    const recipeRows = [
+      [{value:"LEDGR · RENTABILIDAD DE RECETAS",style:"title",mergeAcross:6}],
+      [{value:`Exportado el ${date} · Valores estimados por unidad`,style:"subtitle",mergeAcross:6}],
+      ["Receta", "Rinde", "Costo total", "Costo unitario", "Precio de venta", "Ganancia/unidad", "Margen"].map(value=>({value,style:"header"})),
+      ...ranked.map(r=>{const recipe=recipes.find(x=>x.name===r.name); const price=sellingPrice(recipe,ingredients); const margin=price>0?(price-r.cost)/price:0; return [
+        {value:r.name,style:"text"}, {value:Number(recipe.yield||1),style:"number"},
+        {value:recipeCost(recipe,ingredients),style:"money"}, {value:r.cost,style:"money"},
+        {value:price,style:"money"}, {value:price-r.cost,style:"money"}, {value:margin,style:"percent"}
+      ];})
+    ];
+    const inventoryRows = [
+      [{value:"LEDGR · INVENTARIO",style:"title",mergeAcross:5}],
+      [{value:`Exportado el ${date} · Importes en pesos uruguayos (UYU)`,style:"subtitle",mergeAcross:5}],
+      ["Insumo", "Stock", "Unidad", "Stock mínimo", "Costo unitario", "Valor de stock"].map(value=>({value,style:"header"})),
+      ...ingredients.map(i=>[i.name,Number(i.stock||0),i.unit||"",Number(i.min||0),{value:Number(i.cost||0),style:"money"},{value:Number(i.stock||0)*Number(i.cost||0),style:"money"}].map(v=>typeof v === "object"?v:{value:v,style:typeof v === "number"?"number":"text"}))
+    ];
+    exportStyledWorkbook("ledgr-reporte", [
+      {name:"Movimientos",rows:movementRows,widths:[90,65,220,110,105,120,110]},
+      {name:"Rentabilidad",rows:recipeRows,widths:[190,65,105,105,105,110,75]},
+      {name:"Inventario",rows:inventoryRows,widths:[180,75,65,85,105,110]},
+    ]);
   };
   return (
     <div className="page-content">
@@ -74,11 +86,11 @@ export default function Reports({ movements, recipes, ingredients }) {
           <p className="eyebrow">ANÁLISIS Y DECISIONES</p>
           <h1>Los números cuentan.</h1>
           <p className="muted">
-            Compará períodos y encontrá oportunidades para mejorar el margen.
+            Resumen financiero, rentabilidad de recetas e inventario en un archivo Excel con formato.
           </p>
         </div>
         <button className="btn-primary" onClick={exportReport}>
-          <Download size={17} /> Exportar reporte
+          <Download size={17} /> Exportar Excel
         </button>
       </div>
       <div className="report-kpis">

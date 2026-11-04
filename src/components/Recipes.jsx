@@ -111,7 +111,7 @@ export default function Recipes({
               </div>
               <div className="recipe-card-body">
                 <div className="recipe-title-row">
-                  <h2>{r.name}</h2>
+                  <h2 title={r.name}>{r.name}</h2>
                   <span
                     className="margin-badge"
                     title="Porcentaje de ganancia sobre el precio de venta."
@@ -138,13 +138,15 @@ export default function Recipes({
                     </b>
                   </div>
                 </div>
-                <div className="recipe-cost-bar">
-                  <i
-                    style={{
-                      width: `${Math.max(4, Math.min(100, 100 - margin))}%`,
-                    }}
-                  />
+                <div className="recipe-cost-bar" role="img" aria-label={`Margen estimado ${margin.toFixed(0)} por ciento`}>
+                  <i style={{ width: `${Math.max(4, Math.min(100, margin))}%` }} />
                 </div>
+                <div className="recipe-extra-metrics">
+                  <div><span><ChefHat size={13}/> Rendimiento</span><b>{Number(r.yield || 1)} porciones/un.</b></div>
+                  <div><span><Plus size={13}/> Ingredientes</span><b>{(r.ingredients || []).length} insumos</b></div>
+                  <div><span>Ganancia por unidad</span><b className={profit >= 0 ? "positive" : "negative"}>{money(profit)}</b></div>
+                </div>
+                {(r.ingredients || []).length > 0 && <p className="recipe-ingredient-summary">Incluye: {(r.ingredients || []).slice(0, 3).map((line) => ingredients.find((i) => i.id === line.id)?.name || "Insumo").join(" · ")}{r.ingredients.length > 3 ? ` + ${r.ingredients.length - 3} más` : ""}</p>}
                 <div className="recipe-card-footer">
                   <span>
                     <Clock3 size={14} /> Mano de obra {money(r.labor)}

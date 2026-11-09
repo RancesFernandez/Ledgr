@@ -3,7 +3,9 @@ export const isCountUnit = (unit) =>
     String(unit || "").toLowerCase(),
   );
 export function consumption(line, ingredient, sold, yieldCount) {
-  const amount = (Number(line.qty) * Number(sold)) / Number(yieldCount);
+  // line.qty representa lo necesario para elaborar una receta/unidad completa.
+  // El rendimiento es informativo y no debe reducir el consumo al vender una unidad.
+  const amount = Number(line.qty) * Number(sold);
   if (!Number.isFinite(amount) || amount <= 0)
     throw new Error(`Cantidad inválida de ${ingredient.name}.`);
   if (isCountUnit(ingredient.unit) && !Number.isInteger(amount))
@@ -31,8 +33,8 @@ export function recipeCost(recipe, ingredients) {
   );
 }
 export function sellingPrice(recipe, ingredients) {
-  const cost =
-    recipeCost(recipe, ingredients) / Math.max(1, Number(recipe.yield) || 1);
+  // El precio sugerido se calcula sobre el producto/preparación completa.
+  const cost = recipeCost(recipe, ingredients);
   if (recipe.priceSource !== "margin") return Number(recipe.price || 0);
   const value = Number(recipe.profitValue ?? recipe.margin ?? 0);
   return recipe.profitMode === "fixed"

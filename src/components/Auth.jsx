@@ -86,9 +86,7 @@ export default function Auth({ onDemo }) {
             </div>
           </div>
         </div>
-        <div className="auth-footer">
-          Un producto para negocios que hacen las cosas con cariño.
-        </div>
+        
       </div>
       <div className="auth-right">
         <div className="auth-form-wrap">

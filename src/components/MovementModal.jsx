@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from "react";
 import { X, PackagePlus } from "lucide-react";
 import { incomeCategories, expenseCategories } from "../data/categories";
+import PartyFields from "./PartyFields";
 
-export default function MovementModal({ onClose, onSave, ingredients = [] }) {
+export default function MovementModal({ onClose, onSave, ingredients = [], parties = [] }) {
   const [type, setType] = useState("income");
   const [buyInventory, setBuyInventory] = useState(false);
   const [itemMode, setItemMode] = useState("existing");
@@ -11,10 +12,11 @@ export default function MovementModal({ onClose, onSave, ingredients = [] }) {
   const [quantity, setQuantity] = useState("1");
   const [unitCost, setUnitCost] = useState("");
   const [saving, setSaving] = useState(false);
+  const [party, setParty] = useState({ name: "", phone: "", email: "", taxId: "", address: "", notes: "" });
   const [form, setForm] = useState({
     concept: "", category: "Ventas", amount: "",
     date: new Date().toISOString().slice(0, 10), invoice: "",
-    method: "Transferencia", notes: "",
+    method: "Transferencia", channel: "Otro", notes: "",
   });
   const update = (k, v) => setForm((p) => ({ ...p, [k]: v }));
   const selected = ingredients.find((i) => i.id === selectedId);
@@ -48,6 +50,7 @@ export default function MovementModal({ onClose, onSave, ingredients = [] }) {
           quantity: Number(quantity), unitCost: Number(unitCost), totalCost: Number(total.toFixed(2)),
         },
       } : { ...form, type, amount: Number(form.amount) };
+      data.party = { ...party, role: (type === "income" && !buyInventory) ? "customer" : "supplier" };
       const result = await onSave(data);
       if (result !== null) onClose();
     } finally { setSaving(false); }
@@ -91,9 +94,11 @@ export default function MovementModal({ onClose, onSave, ingredients = [] }) {
             <label>Fecha<input required type="date" value={form.date} onChange={(e)=>update("date",e.target.value)}/></label>
             <label>Categoría<select value={form.category} onChange={(e)=>update("category",e.target.value)}>{categoryList.map((x)=><option key={x}>{x}</option>)}</select></label>
             <label>Forma de pago<select value={form.method} onChange={(e)=>update("method",e.target.value)}>{["Transferencia","Efectivo","Débito","Crédito","Mercado Pago","Otro"].map((x)=><option key={x}>{x}</option>)}</select></label>
+            {type === "income" && <label>Canal de venta<select value={form.channel} onChange={(e)=>update("channel",e.target.value)}>{["Instagram","Web","WhatsApp","Presencial","Otro"].map((x)=><option key={x}>{x}</option>)}</select></label>}
             <label className="span-2">N.º de factura / comprobante<input value={form.invoice} onChange={(e)=>update("invoice",e.target.value)} placeholder="Ej. e-Factura A 000123"/></label>
             <label className="span-2">Notas (opcional)<textarea rows="2" value={form.notes} onChange={(e)=>update("notes",e.target.value)} placeholder="Cliente, proveedor u observaciones…"/></label>
           </div>}
+          <PartyFields role={(type === "income" && !buyInventory) ? "customer" : "supplier"} parties={parties} value={party} onChange={setParty}/>
           <div className="modal-actions"><button type="button" className="btn-secondary" onClick={onClose}>Cancelar</button><button className="btn-primary" type="submit" disabled={saving}>{saving ? "Guardando…" : buyInventory ? "Registrar compra y actualizar stock" : "Guardar movimiento"}</button></div>
         </form>
       </section>

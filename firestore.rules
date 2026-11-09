@@ -23,7 +23,8 @@ service cloud.firestore {
     function validMovement() {
       return request.resource.data.keys().hasOnly([
         'type', 'concept', 'category', 'amount', 'date', 'invoice', 'method',
-        'notes', 'recipeId', 'quantity', 'estimatedCost', 'estimatedProfit', 'createdAt', 'updatedAt'
+        'notes', 'recipeId', 'quantity', 'estimatedCost', 'estimatedProfit', 'channel',
+        'party', 'partyId', 'partyRole', 'inventoryPurchase', 'createdAt', 'updatedAt'
       ])
       && request.resource.data.type in ['income', 'expense']
       && request.resource.data.concept is string
@@ -33,7 +34,25 @@ service cloud.firestore {
       && request.resource.data.amount is number
       && request.resource.data.amount > 0
       && request.resource.data.date is string
-      && request.resource.data.date.matches('^\\d{4}-\\d{2}-\\d{2}$');
+      && request.resource.data.date.matches('^\\d{4}-\\d{2}-\\d{2}$')
+      && (!('channel' in request.resource.data) || (request.resource.data.channel is string && request.resource.data.channel.size() <= 40))
+      && (!('method' in request.resource.data) || (request.resource.data.method is string && request.resource.data.method.size() <= 60))
+      && (!('notes' in request.resource.data) || (request.resource.data.notes is string && request.resource.data.notes.size() <= 2000))
+      && (!('recipeId' in request.resource.data) || request.resource.data.recipeId is string)
+      && (!('quantity' in request.resource.data) || (request.resource.data.quantity is number && request.resource.data.quantity > 0))
+      && (!('estimatedCost' in request.resource.data) || (request.resource.data.estimatedCost is number && request.resource.data.estimatedCost >= 0))
+      && (!('estimatedProfit' in request.resource.data) || request.resource.data.estimatedProfit is number)
+      && (!('partyId' in request.resource.data) || request.resource.data.partyId is string)
+      && (!('partyRole' in request.resource.data) || request.resource.data.partyRole in ['customer', 'supplier'])
+      && (!('party' in request.resource.data) || request.resource.data.party == null || (
+        request.resource.data.party is map
+        && (!('name' in request.resource.data.party) || (request.resource.data.party.name is string && request.resource.data.party.name.size() <= 120))
+        && (!('phone' in request.resource.data.party) || (request.resource.data.party.phone is string && request.resource.data.party.phone.size() <= 40))
+        && (!('email' in request.resource.data.party) || (request.resource.data.party.email is string && request.resource.data.party.email.size() <= 320))
+        && (!('taxId' in request.resource.data.party) || (request.resource.data.party.taxId is string && request.resource.data.party.taxId.size() <= 60))
+        && (!('address' in request.resource.data.party) || (request.resource.data.party.address is string && request.resource.data.party.address.size() <= 240))
+      ))
+      && (!('inventoryPurchase' in request.resource.data) || request.resource.data.inventoryPurchase is map);
     }
 
     function validIngredient(ingredientId) {
@@ -82,6 +101,27 @@ service cloud.firestore {
       && (!('imageUrl' in request.resource.data) || (request.resource.data.imageUrl is string && request.resource.data.imageUrl.size() <= 700000));
     }
 
+    function validParty(partyId) {
+      return request.resource.data.keys().hasOnly([
+        'id', 'role', 'name', 'phone', 'email', 'taxId', 'address', 'notes',
+        'totalAmount', 'purchaseCount', 'operationCount', 'badge', 'lastMovementAt',
+        'createdAt', 'updatedAt'
+      ])
+      && request.resource.data.id == partyId
+      && request.resource.data.role in ['customer', 'supplier']
+      && request.resource.data.name is string
+      && request.resource.data.name.size() > 0
+      && request.resource.data.name.size() <= 120
+      && (!('phone' in request.resource.data) || (request.resource.data.phone is string && request.resource.data.phone.size() <= 40))
+      && (!('email' in request.resource.data) || (request.resource.data.email is string && request.resource.data.email.size() <= 320))
+      && (!('taxId' in request.resource.data) || (request.resource.data.taxId is string && request.resource.data.taxId.size() <= 60))
+      && (!('address' in request.resource.data) || (request.resource.data.address is string && request.resource.data.address.size() <= 240))
+      && (!('notes' in request.resource.data) || (request.resource.data.notes is string && request.resource.data.notes.size() <= 2000))
+      && request.resource.data.totalAmount is number
+      && request.resource.data.purchaseCount is number
+      && request.resource.data.operationCount is number;
+    }
+
     match /users/{userId} {
       allow read: if owns(userId);
       allow create: if owns(userId) && validProfile(userId)
@@ -114,6 +154,15 @@ service cloud.firestore {
         allow create: if owns(userId) && validRecipe(recipeId)
           && request.resource.data.createdAt == request.time;
         allow update: if owns(userId) && validRecipe(recipeId)
+          && request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if owns(userId);
+      }
+
+      match /parties/{partyId} {
+        allow read: if owns(userId);
+        allow create: if owns(userId) && validParty(partyId)
+          && request.resource.data.createdAt == request.time;
+        allow update: if owns(userId) && validParty(partyId)
           && request.resource.data.createdAt == resource.data.createdAt;
         allow delete: if owns(userId);
       }

@@ -40,19 +40,19 @@ export default function Reports({ movements, recipes, ingredients }) {
   const ranked = recipes
     .map((r) => ({
       name: r.name,
-      cost: recipeCost(r, ingredients) / Math.max(1, r.yield),
+      cost: recipeCost(r, ingredients),
       price: sellingPrice(r, ingredients),
       profit:
-        sellingPrice(r, ingredients) - recipeCost(r, ingredients) / Math.max(1, r.yield),
+        sellingPrice(r, ingredients) - recipeCost(r, ingredients),
     }))
     .sort((a, b) => b.profit - a.profit);
   const exportReport = () => {
     const date = new Date().toLocaleDateString("es-UY");
     const movementRows = [
-      [{value:"LEDGR · REPORTE FINANCIERO",style:"title",mergeAcross:6}],
-      [{value:`Exportado el ${date} · Importes en pesos uruguayos (UYU)`,style:"subtitle",mergeAcross:6}],
-      ["Fecha", "Tipo", "Concepto", "Categoría", "Monto (UYU)", "Comprobante", "Método"].map(value=>({value,style:"header"})),
-      ...movements.map(m=>[m.date || "", m.type === "income" ? "Ingreso" : "Egreso", m.concept || "", m.category || "", {value:Number(m.amount||0),style:"money"}, m.invoice || "", m.method || ""] .map((v)=>typeof v === "object" ? v : {value:v,style:"text"})),
+      [{value:"LEDGR · REPORTE FINANCIERO",style:"title",mergeAcross:7}],
+      [{value:`Exportado el ${date} · Importes en pesos uruguayos (UYU)`,style:"subtitle",mergeAcross:7}],
+      ["Fecha", "Tipo", "Concepto", "Categoría", "Monto (UYU)", "Comprobante", "Método", "Canal"].map(value=>({value,style:"header"})),
+      ...movements.map(m=>[m.date || "", m.type === "income" ? "Ingreso" : "Egreso", m.concept || "", m.category || "", {value:Number(m.amount||0),style:"money"}, m.invoice || "", m.method || "", m.channel || ""] .map((v)=>typeof v === "object" ? v : {value:v,style:"text"})),
       [{value:"TOTAL INGRESOS",style:"total"},{value:"",style:"total"},{value:"",style:"total"},{value:"",style:"total"},{value:income,style:"money"},{value:"",style:"total"},{value:"",style:"total"}],
       [{value:"TOTAL EGRESOS",style:"total"},{value:"",style:"total"},{value:"",style:"total"},{value:"",style:"total"},{value:expense,style:"money"},{value:"",style:"total"},{value:"",style:"total"}],
       [{value:"RESULTADO NETO",style:"total"},{value:"",style:"total"},{value:"",style:"total"},{value:"",style:"total"},{value:income-expense,style:"money"},{value:"",style:"total"},{value:"",style:"total"}],
@@ -60,7 +60,7 @@ export default function Reports({ movements, recipes, ingredients }) {
     const recipeRows = [
       [{value:"LEDGR · RENTABILIDAD DE RECETAS",style:"title",mergeAcross:6}],
       [{value:`Exportado el ${date} · Valores estimados por unidad`,style:"subtitle",mergeAcross:6}],
-      ["Receta", "Rinde", "Costo total", "Costo unitario", "Precio de venta", "Ganancia/unidad", "Margen"].map(value=>({value,style:"header"})),
+      ["Receta", "Rinde (porciones)", "Costo elaboración", "Costo producto completo", "Precio producto completo", "Ganancia completa", "Margen"].map(value=>({value,style:"header"})),
       ...ranked.map(r=>{const recipe=recipes.find(x=>x.name===r.name); const price=sellingPrice(recipe,ingredients); const margin=price>0?(price-r.cost)/price:0; return [
         {value:r.name,style:"text"}, {value:Number(recipe.yield||1),style:"number"},
         {value:recipeCost(recipe,ingredients),style:"money"}, {value:r.cost,style:"money"},
@@ -74,7 +74,7 @@ export default function Reports({ movements, recipes, ingredients }) {
       ...ingredients.map(i=>[i.name,Number(i.stock||0),i.unit||"",Number(i.min||0),{value:Number(i.cost||0),style:"money"},{value:Number(i.stock||0)*Number(i.cost||0),style:"money"}].map(v=>typeof v === "object"?v:{value:v,style:typeof v === "number"?"number":"text"}))
     ];
     exportStyledWorkbook("ledgr-reporte", [
-      {name:"Movimientos",rows:movementRows,widths:[90,65,220,110,105,120,110]},
+      {name:"Movimientos",rows:movementRows,widths:[90,65,220,110,105,120,110,100]},
       {name:"Rentabilidad",rows:recipeRows,widths:[190,65,105,105,105,110,75]},
       {name:"Inventario",rows:inventoryRows,widths:[180,75,65,85,105,110]},
     ]);

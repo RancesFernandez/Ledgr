@@ -171,8 +171,8 @@ export default function RecordModal({ kind, ingredients, onClose, onSave, initia
             </label>
             {isRecipe ? (
               <>
-                <label data-tooltip="Cantidad de unidades o porciones que obtenés al preparar toda la receta.">
-                  Rinde (unidades)
+                <label data-tooltip="Rendimiento orientativo en porciones. No divide el costo ni el consumo: cada venta representa la preparación completa.">
+                  Rinde (porciones de referencia)
                   <input
                     type="number"
                     min="1"

@@ -42,6 +42,7 @@ export default function App() {
     [movements, setMovements] = useState([]),
     [ingredients, setIngredients] = useState([]),
     [recipes, setRecipes] = useState([]),
+    [parties, setParties] = useState([]),
     [recipeToEdit, setRecipeToEdit] = useState(null),
     [toast, setToast] = useState("");
   useEffect(() => {
@@ -83,6 +84,7 @@ export default function App() {
         setMovements([]);
         setIngredients([]);
         setRecipes([]);
+        setParties([]);
       }
       return;
     }
@@ -102,15 +104,17 @@ export default function App() {
           );
           return s.docs.map((d) => ({ id: d.id, ...d.data() }));
         };
-        const [m, i, r] = await Promise.all([
+        const [m, i, r, p] = await Promise.all([
           load("movements"),
           load("ingredients"),
           load("recipes"),
+          load("parties"),
         ]);
         if (!alive) return;
         setMovements(m);
         setIngredients(i);
         setRecipes(r);
+        setParties(p);
       } catch (e) {
         notify("No se pudieron cargar los datos: " + e.message);
       }
@@ -124,7 +128,44 @@ export default function App() {
     setTimeout(() => setToast(""), 3800);
   }
   const isDemo = demo || (!user && !firebaseConfigured);
+  async function upsertParty(party, amount = 0) {
+    if (!party || !String(party.name || "").trim()) return null;
+    const role = party.role === "supplier" ? "supplier" : "customer";
+    const name = String(party.name).trim();
+    const normalized = name.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 70);
+    if (!normalized) return null;
+    const id = `${role}-${normalized}`;
+    const old = parties.find(x => x.id === id);
+    const merged = {
+      ...old, ...party, id, role, name,
+      phone: String(party.phone || old?.phone || "").trim(),
+      email: String(party.email || old?.email || "").trim(),
+      taxId: String(party.taxId || old?.taxId || "").trim(),
+      address: String(party.address || old?.address || "").trim(),
+      notes: String(party.notes || old?.notes || "").trim(),
+      totalAmount: Number(old?.totalAmount || 0) + Number(amount || 0),
+      purchaseCount: Number(old?.purchaseCount || 0) + (role === "customer" ? 1 : 0),
+      operationCount: Number(old?.operationCount || 0) + 1,
+      badge: role === "customer" ? (Number(old?.totalAmount || 0) + Number(amount || 0) >= 20000 ? "Cliente destacado" : Number(old?.purchaseCount || 0) + 1 >= 5 ? "Frecuente" : "") : "",
+      lastMovementAt: new Date().toISOString(),
+    };
+    if (isDemo) {
+      setParties(prev => [merged, ...prev.filter(x => x.id !== id)]);
+      return merged;
+    }
+    if (!user || !firebaseConfigured) return null;
+    await setDoc(doc(db, "users", user.uid, "parties", id), {
+      ...merged, updatedAt: serverTimestamp(),
+      ...(old ? {} : { createdAt: serverTimestamp() }),
+    }, { merge: true });
+    setParties(prev => [merged, ...prev.filter(x => x.id !== id)]);
+    return merged;
+  }
   async function save(type, data) {
+    if (type === "movements" && data.party?.name?.trim()) {
+      const savedParty = await upsertParty(data.party, Number(data.amount || 0));
+      if (savedParty) data = { ...data, party: { ...data.party, ...savedParty }, partyId: savedParty.id, partyRole: savedParty.role };
+    }
     if (isDemo) {
       const item = { ...data, id: `${type}-${Date.now()}` };
       if (type === "movements") setMovements((p) => [item, ...p]);
@@ -179,6 +220,10 @@ export default function App() {
     }
   }
   async function addMovement(data) {
+    if (data.inventoryPurchase && data.party?.name?.trim()) {
+      const savedParty = await upsertParty(data.party, Number(data.amount || 0));
+      if (savedParty) data = { ...data, party: { ...data.party, ...savedParty }, partyId: savedParty.id, partyRole: savedParty.role };
+    }
     const purchase = data.inventoryPurchase;
     if (!purchase) return save("movements", data);
     const today = data.date || new Date().toISOString().slice(0, 10);
@@ -379,33 +424,35 @@ export default function App() {
       notify("No se pudo actualizar el inventario: " + e.message);
     }
   }
-  async function sellRecipe(r, quantity = 1) {
-    if (!r || !(Number(r.yield) > 0)) { notify("La receta necesita un rendimiento válido."); return; }
-    if (!(sellingPrice(r, ingredients) > 0)) { notify("Definí un precio de venta mayor que cero antes de registrar la venta."); return; }
+  async function sellRecipe(r, quantity = 1, saleInfo = {}) {
+    if (!r || !(Number(r.yield) > 0)) { notify("La receta necesita un rendimiento válido."); return false; }
+    if (!(sellingPrice(r, ingredients) > 0)) { notify("Definí un precio de venta mayor que cero antes de registrar la venta."); return false; }
     const today = new Date().toISOString().slice(0, 10);
     const qty = Math.max(1, Math.floor(Number(quantity) || 1));
     const needed = (r.ingredients || []).filter((x) => Number(x.qty) > 0);
     const ingredientBatchCost = needed.reduce((sum, line) => sum + Number(ingredients.find((i) => i.id === line.id)?.cost || 0) * Number(line.qty || 0), 0);
     const laborCost = Number(r.labor || 0);
-    const unitCostEstimate = recipeCost(r, ingredients) / Math.max(1, Number(r.yield));
+    const unitCostEstimate = recipeCost(r, ingredients);
     const totalRevenue = sellingPrice(r, ingredients) * qty;
     const totalEstimatedCost = unitCostEstimate * qty;
     const estimatedProfit = totalRevenue - totalEstimatedCost;
-    if (!needed.length) { notify("Agregá ingredientes a la receta antes de venderla."); return; }
+    if (!needed.length) { notify("Agregá ingredientes a la receta antes de venderla."); return false; }
     try {
+      const savedParty = saleInfo.party?.name?.trim() ? await upsertParty({ ...saleInfo.party, role: "customer" }, totalRevenue) : null;
+      const partySnapshot = savedParty ? { ...saleInfo.party, ...savedParty, role: "customer" } : null;
       if (isDemo) {
         const updates = [];
         for (const line of needed) {
           const ing = ingredients.find((i) => i.id === line.id);
-          if (!ing) { notify("Ingrediente inexistente."); return; }
+          if (!ing) { notify("Ingrediente inexistente."); return false; }
           if (isCountUnit(ing.unit) && !Number.isInteger(Number(ing.stock))) throw new Error(`El stock de ${ing.name} contiene decimales; corregilo antes de vender.`);
           if (Number(ing.stock || 0) < consumption(line, ing, qty, r.yield)) {
-            notify(`Stock insuficiente de ${ing?.name || "un ingrediente"}.`); return;
+            notify(`Stock insuficiente de ${ing?.name || "un ingrediente"}.`); return false;
           }
           updates.push({ ...ing, stock: Number(ing.stock) - consumption(line, ing, qty, r.yield) });
         }
         setIngredients((prev) => prev.map((ing) => updates.find((u) => u.id === ing.id) || ing));
-        setMovements((prev) => [{ id: `sale-${Date.now()}`, type: "income", concept: `Venta: ${r.name} × ${qty}`, category: "Ventas", amount: totalRevenue, date: today, invoice: "", method: "Venta directa", notes: `Costo estimado: ${totalEstimatedCost.toFixed(2)} UYU · Ganancia estimada: ${estimatedProfit.toFixed(2)} UYU · Incluye ingredientes, mano de obra y costos fijos.` }, ...prev]);
+        setMovements((prev) => [{ id: `sale-${Date.now()}`, type: "income", concept: `Venta: ${r.name} × ${qty}`, category: "Ventas", amount: totalRevenue, date: today, invoice: "", method: saleInfo.method || "Otro", channel: saleInfo.channel || "Otro", party: partySnapshot, partyId: savedParty?.id || "", partyRole: "customer", notes: [saleInfo.notes, `Canal: ${saleInfo.channel || "Otro"}. Costo estimado total: ${totalEstimatedCost.toFixed(2)} UYU · Ganancia estimada total: ${estimatedProfit.toFixed(2)} UYU · Costo por unidad completa: ${unitCostEstimate.toFixed(2)} UYU · Precio por unidad completa: ${sellingPrice(r, ingredients).toFixed(2)} UYU.`].filter(Boolean).join(" ") }, ...prev]);
       } else {
         await runTransaction(db, async (tx) => {
           const refs = needed.map((line) => ({ line, ref: doc(db, "users", user.uid, "ingredients", line.id) }));
@@ -441,10 +488,12 @@ export default function App() {
           }
           const movementRef = doc(collection(db, "users", user.uid, "movements"));
           tx.set(movementRef, {
-            type: "income", concept: `Venta: ${r.name}`, category: "Ventas",
+            type: "income", concept: `Venta: ${r.name} × ${qty}`, category: "Ventas",
             amount: totalRevenue, date: today, invoice: "",
-            method: "Venta directa", notes: `Costo estimado: ${totalEstimatedCost.toFixed(2)} UYU · Ganancia estimada: ${estimatedProfit.toFixed(2)} UYU · Incluye ingredientes, mano de obra y costos fijos.`,
-            estimatedCost: totalEstimatedCost, estimatedProfit, recipeId: r.id, quantity: qty, createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+            method: saleInfo.method || "Otro", channel: saleInfo.channel || "Otro",
+            party: partySnapshot, partyId: savedParty?.id || "", partyRole: "customer",
+            notes: [saleInfo.notes, `Canal: ${saleInfo.channel || "Otro"}. Costo estimado total: ${totalEstimatedCost.toFixed(2)} UYU · Ganancia estimada total: ${estimatedProfit.toFixed(2)} UYU · Costo por unidad completa: ${unitCostEstimate.toFixed(2)} UYU · Precio por unidad completa: ${sellingPrice(r, ingredients).toFixed(2)} UYU.`].filter(Boolean).join(" "),
+            estimatedCost: totalEstimatedCost, estimatedProfit, recipeId: r.id, quantity: qty, channel: saleInfo.channel || "Otro", createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
           });
         });
         const [ingredientSnap, movementSnap] = await Promise.all([
@@ -455,13 +504,16 @@ export default function App() {
         setMovements(movementSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
       }
       notify("Venta registrada; ingredientes y movimiento financiero actualizados en una sola operación.");
+      return true;
     } catch (e) {
       notify("La venta no se completó y no se descontó stock: " + e.message);
+      return false;
     }
   }
   async function logout() {
     if (user && auth) await signOut(auth);
     setDemo(false);
+    setParties([]);
     setActive("dashboard");
   }
   if (user === undefined && !demo)
@@ -477,6 +529,7 @@ export default function App() {
     setMovements([]);
     setIngredients([]);
     setRecipes([]);
+    setParties([]);
     setDemo(true);
   }} />;
   const content =
@@ -504,6 +557,7 @@ export default function App() {
         onEdit={(recipe) => { setRecipeToEdit(recipe); setModal("recipe"); }}
         onDelete={deleteRecipe}
         onSell={sellRecipe}
+        parties={parties}
       />
     ) : (
       <Reports
@@ -559,7 +613,7 @@ export default function App() {
         {content}
       </main>
       {modal === "movement" && (
-        <MovementModal onClose={() => setModal("")} onSave={addMovement} ingredients={ingredients} />
+        <MovementModal onClose={() => setModal("")} onSave={addMovement} ingredients={ingredients} parties={parties} />
       )}
       {(modal === "recipe" || modal === "ingredient") && (
         <RecordModal

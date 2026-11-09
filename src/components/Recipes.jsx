@@ -4,6 +4,7 @@ import {
   sellingPrice,
 } from "../utils/recipe";
 import React, { useState } from "react";
+import PartyFields from "./PartyFields";
 import {
   ChefHat,
   Clock3,
@@ -27,12 +28,17 @@ export default function Recipes({
   onSell,
   onEdit,
   onDelete,
+  parties = [],
 }) {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [sale, setSale] = useState(null);
   const [saleQty, setSaleQty] = useState(1);
+  const [saleChannel, setSaleChannel] = useState("WhatsApp");
+  const [saleMethod, setSaleMethod] = useState("Transferencia");
+  const [saleNotes, setSaleNotes] = useState("");
+  const [saleParty, setSaleParty] = useState({ name: "", phone: "", email: "", taxId: "", address: "", notes: "" });
   const rows = recipes.filter((r) =>
     r.name.toLowerCase().includes(search.toLowerCase()),
   );
@@ -88,7 +94,7 @@ export default function Recipes({
           );
           const cost = recipeCost(r, ingredients);
           const overhead = ((ing + (r.labor || 0)) * (r.overhead || 0)) / 100;
-          const unit = cost / Math.max(1, r.yield || 1);
+          const unit = cost;
           const price = sellingPrice(r, ingredients);
           const profit = price - unit;
           const margin = price ? (profit / price) * 100 : 0;
@@ -125,11 +131,7 @@ export default function Recipes({
                     <b>{money(cost)}</b>
                   </div>
                   <div>
-                    <span>Costo por unidad</span>
-                    <b>{money(unit)}</b>
-                  </div>
-                  <div>
-                    <span>Precio sugerido</span>
+                    <span>Precio por producto completo</span>
                     <b
                       className="price-highlight"
                       title="Precio exacto que definiste para vender cada unidad."
@@ -142,9 +144,9 @@ export default function Recipes({
                   <i style={{ width: `${Math.max(4, Math.min(100, margin))}%` }} />
                 </div>
                 <div className="recipe-extra-metrics">
-                  <div><span><ChefHat size={13}/> Rendimiento</span><b>{Number(r.yield || 1)} porciones/un.</b></div>
+                  <div><span><ChefHat size={13}/> Rendimiento</span><b>{Number(r.yield || 1)} porciones de referencia</b></div>
                   <div><span><Plus size={13}/> Ingredientes</span><b>{(r.ingredients || []).length} insumos</b></div>
-                  <div><span>Ganancia por unidad</span><b className={profit >= 0 ? "positive" : "negative"}>{money(profit)}</b></div>
+                  <div><span>Ganancia por producto completo</span><b className={profit >= 0 ? "positive" : "negative"}>{money(profit)}</b></div>
                 </div>
                 {(r.ingredients || []).length > 0 && <p className="recipe-ingredient-summary">Incluye: {(r.ingredients || []).slice(0, 3).map((line) => ingredients.find((i) => i.id === line.id)?.name || "Insumo").join(" · ")}{r.ingredients.length > 3 ? ` + ${r.ingredients.length - 3} más` : ""}</p>}
                 <div className="recipe-card-footer">
@@ -172,6 +174,10 @@ export default function Recipes({
                       onClick={() => {
                         setSale(r);
                         setSaleQty(1);
+                        setSaleChannel("WhatsApp");
+                        setSaleMethod("Transferencia");
+                        setSaleNotes("");
+                        setSaleParty({ name: "", phone: "", email: "", taxId: "", address: "", notes: "" });
                       }}
                     >
                       Registrar venta
@@ -193,7 +199,7 @@ export default function Recipes({
       {sale &&
         (() => {
           const batchCost = recipeCost(sale, ingredients);
-          const unitCost = batchCost / Math.max(1, Number(sale.yield) || 1);
+          const unitCost = batchCost;
           const unitPrice = sellingPrice(sale, ingredients);
           const total = unitPrice * saleQty;
           const totalCost = unitCost * saleQty;
@@ -209,7 +215,7 @@ export default function Recipes({
                     <p className="eyebrow">RESUMEN DE VENTA</p>
                     <h2>{sale.name}</h2>
                     <p className="muted">
-                      Estimación según los costos registrados en la receta.
+                      Venta de una unidad completa. El rendimiento no divide el costo ni el consumo de insumos.
                     </p>
                   </div>
                   <button
@@ -232,6 +238,12 @@ export default function Recipes({
                     }
                   />
                 </label>
+                <div className="form-grid sale-extra-fields">
+                  <label>Canal de venta<select value={saleChannel} onChange={(e) => setSaleChannel(e.target.value)}>{["Instagram", "Web", "WhatsApp", "Presencial", "Otro"].map((x) => <option key={x}>{x}</option>)}</select></label>
+                  <label>Forma de pago<select value={saleMethod} onChange={(e) => setSaleMethod(e.target.value)}>{["Transferencia", "Efectivo", "Débito", "Crédito", "Mercado Pago", "Otro"].map((x) => <option key={x}>{x}</option>)}</select></label>
+                  <label className="span-2">Notas (opcional)<textarea rows="2" value={saleNotes} onChange={(e) => setSaleNotes(e.target.value)} placeholder="Cliente, entrega u observaciones…" /></label>
+                </div>
+                <PartyFields role="customer" parties={parties} value={saleParty} onChange={setSaleParty}/>
                 <div className="sale-summary-grid">
                   <div>
                     <span>Ingreso total</span>
@@ -260,7 +272,7 @@ export default function Recipes({
                   </div>
                 </div>
                 <p className="muted sale-cost-detail">
-                  Costo unitario: {money(unitCost)} · Precio unitario:{" "}
+                  Costo del producto completo: {money(unitCost)} · Precio de venta por unidad completa:{" "}
                   {money(unitPrice)}. El costo incluye ingredientes, mano de
                   obra y costos fijos configurados.
                 </p>
@@ -273,9 +285,9 @@ export default function Recipes({
                   </button>
                   <button
                     className="btn-primary"
-                    onClick={() => {
-                      onSell(sale, saleQty);
-                      setSale(null);
+                    onClick={async () => {
+                      const saved = await onSell(sale, saleQty, { channel: saleChannel, method: saleMethod, notes: saleNotes, party: { ...saleParty, role: "customer" } });
+                      if (saved !== false) setSale(null);
                     }}
                   >
                     Confirmar venta

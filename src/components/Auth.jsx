@@ -46,7 +46,9 @@ export default function Auth({ onDemo }) {
             ? "Ese correo ya tiene una cuenta."
             : err.code === "auth/weak-password"
               ? "Usá una contraseña de al menos 6 caracteres."
-              : err.message,
+              : err.code === "auth/unauthorized-domain"
+                ? "Este dominio de Vercel no está autorizado en Firebase Authentication. Agregalo en Firebase Console → Authentication → Settings → Authorized domains."
+                : err.message,
       );
     } finally {
       setBusy(false);
@@ -205,12 +207,16 @@ export default function Auth({ onDemo }) {
               </>
             )}
           </div>
-          <div className="demo-separator">
-            <span /> o <span />
-          </div>
-          <button className="btn-secondary demo-button" onClick={onDemo}>
-            Entrar sin cuenta (sesión local)
-          </button>
+          {!firebaseConfigured && (
+            <>
+              <div className="demo-separator">
+                <span /> o <span />
+              </div>
+              <button className="btn-secondary demo-button" onClick={onDemo}>
+                Entrar sin cuenta (sesión local)
+              </button>
+            </>
+          )}
           <p className="security-note">
             <LockKeyhole size={13} /> Tu contraseña está protegida por Firebase
             Authentication. Nunca queda visible para el administrador.

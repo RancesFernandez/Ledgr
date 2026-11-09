@@ -41,7 +41,13 @@ export default function Inventory({ ingredients, onAdjust, onAdd }) {
       setCost("");
     }
   };
-  const pagination = usePagination(visible, page, setPage, pageSize, setPageSize);
+  const pagination = usePagination(
+    visible,
+    page,
+    setPage,
+    pageSize,
+    setPageSize,
+  );
   return (
     <div className="page-content">
       <div className="welcome-row">

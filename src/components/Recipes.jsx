@@ -38,7 +38,14 @@ export default function Recipes({
   const [saleChannel, setSaleChannel] = useState("WhatsApp");
   const [saleMethod, setSaleMethod] = useState("Transferencia");
   const [saleNotes, setSaleNotes] = useState("");
-  const [saleParty, setSaleParty] = useState({ name: "", phone: "", email: "", taxId: "", address: "", notes: "" });
+  const [saleParty, setSaleParty] = useState({
+    name: "",
+    phone: "",
+    email: "",
+    taxId: "",
+    address: "",
+    notes: "",
+  });
   const rows = recipes.filter((r) =>
     r.name.toLowerCase().includes(search.toLowerCase()),
   );
@@ -140,15 +147,51 @@ export default function Recipes({
                     </b>
                   </div>
                 </div>
-                <div className="recipe-cost-bar" role="img" aria-label={`Margen estimado ${margin.toFixed(0)} por ciento`}>
-                  <i style={{ width: `${Math.max(4, Math.min(100, margin))}%` }} />
+                <div
+                  className="recipe-cost-bar"
+                  role="img"
+                  aria-label={`Margen estimado ${margin.toFixed(0)} por ciento`}
+                >
+                  <i
+                    style={{ width: `${Math.max(4, Math.min(100, margin))}%` }}
+                  />
                 </div>
                 <div className="recipe-extra-metrics">
-                  <div><span><ChefHat size={13}/> Rendimiento</span><b>{Number(r.yield || 1)} porciones de referencia</b></div>
-                  <div><span><Plus size={13}/> Ingredientes</span><b>{(r.ingredients || []).length} insumos</b></div>
-                  <div><span>Ganancia por producto completo</span><b className={profit >= 0 ? "positive" : "negative"}>{money(profit)}</b></div>
+                  <div>
+                    <span>
+                      <ChefHat size={13} /> Rendimiento
+                    </span>
+                    <b>{Number(r.yield || 1)} porciones de referencia</b>
+                  </div>
+                  <div>
+                    <span>
+                      <Plus size={13} /> Ingredientes
+                    </span>
+                    <b>{(r.ingredients || []).length} insumos</b>
+                  </div>
+                  <div>
+                    <span>Ganancia por producto completo</span>
+                    <b className={profit >= 0 ? "positive" : "negative"}>
+                      {money(profit)}
+                    </b>
+                  </div>
                 </div>
-                {(r.ingredients || []).length > 0 && <p className="recipe-ingredient-summary">Incluye: {(r.ingredients || []).slice(0, 3).map((line) => ingredients.find((i) => i.id === line.id)?.name || "Insumo").join(" · ")}{r.ingredients.length > 3 ? ` + ${r.ingredients.length - 3} más` : ""}</p>}
+                {(r.ingredients || []).length > 0 && (
+                  <p className="recipe-ingredient-summary">
+                    Incluye:{" "}
+                    {(r.ingredients || [])
+                      .slice(0, 3)
+                      .map(
+                        (line) =>
+                          ingredients.find((i) => i.id === line.id)?.name ||
+                          "Insumo",
+                      )
+                      .join(" · ")}
+                    {r.ingredients.length > 3
+                      ? ` + ${r.ingredients.length - 3} más`
+                      : ""}
+                  </p>
+                )}
                 <div className="recipe-card-footer">
                   <span>
                     <Clock3 size={14} /> Mano de obra {money(r.labor)}
@@ -177,7 +220,14 @@ export default function Recipes({
                         setSaleChannel("WhatsApp");
                         setSaleMethod("Transferencia");
                         setSaleNotes("");
-                        setSaleParty({ name: "", phone: "", email: "", taxId: "", address: "", notes: "" });
+                        setSaleParty({
+                          name: "",
+                          phone: "",
+                          email: "",
+                          taxId: "",
+                          address: "",
+                          notes: "",
+                        });
                       }}
                     >
                       Registrar venta
@@ -215,7 +265,8 @@ export default function Recipes({
                     <p className="eyebrow">RESUMEN DE VENTA</p>
                     <h2>{sale.name}</h2>
                     <p className="muted">
-                      Venta de una unidad completa. El rendimiento no divide el costo ni el consumo de insumos.
+                      Venta de una unidad completa. El rendimiento no divide el
+                      costo ni el consumo de insumos.
                     </p>
                   </div>
                   <button
@@ -239,11 +290,57 @@ export default function Recipes({
                   />
                 </label>
                 <div className="form-grid sale-extra-fields">
-                  <label>Canal de venta<select value={saleChannel} onChange={(e) => setSaleChannel(e.target.value)}>{["Instagram", "Web", "WhatsApp", "Presencial", "Otro"].map((x) => <option key={x}>{x}</option>)}</select></label>
-                  <label>Forma de pago<select value={saleMethod} onChange={(e) => setSaleMethod(e.target.value)}>{["Transferencia", "Efectivo", "Débito", "Crédito", "Mercado Pago", "Otro"].map((x) => <option key={x}>{x}</option>)}</select></label>
-                  <label className="span-2">Notas (opcional)<textarea rows="2" value={saleNotes} onChange={(e) => setSaleNotes(e.target.value)} placeholder="Cliente, entrega u observaciones…" /></label>
+                  <label>
+                    Canal de venta
+                    <select
+                      value={saleChannel}
+                      onChange={(e) => setSaleChannel(e.target.value)}
+                    >
+                      {[
+                        "Instagram",
+                        "Web",
+                        "WhatsApp",
+                        "Presencial",
+                        "Otro",
+                      ].map((x) => (
+                        <option key={x}>{x}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Forma de pago
+                    <select
+                      value={saleMethod}
+                      onChange={(e) => setSaleMethod(e.target.value)}
+                    >
+                      {[
+                        "Transferencia",
+                        "Efectivo",
+                        "Débito",
+                        "Crédito",
+                        "Mercado Pago",
+                        "Otro",
+                      ].map((x) => (
+                        <option key={x}>{x}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="span-2">
+                    Notas (opcional)
+                    <textarea
+                      rows="2"
+                      value={saleNotes}
+                      onChange={(e) => setSaleNotes(e.target.value)}
+                      placeholder="Cliente, entrega u observaciones…"
+                    />
+                  </label>
                 </div>
-                <PartyFields role="customer" parties={parties} value={saleParty} onChange={setSaleParty}/>
+                <PartyFields
+                  role="customer"
+                  parties={parties}
+                  value={saleParty}
+                  onChange={setSaleParty}
+                />
                 <div className="sale-summary-grid">
                   <div>
                     <span>Ingreso total</span>
@@ -272,9 +369,10 @@ export default function Recipes({
                   </div>
                 </div>
                 <p className="muted sale-cost-detail">
-                  Costo del producto completo: {money(unitCost)} · Precio de venta por unidad completa:{" "}
-                  {money(unitPrice)}. El costo incluye ingredientes, mano de
-                  obra y costos fijos configurados.
+                  Costo del producto completo: {money(unitCost)} · Precio de
+                  venta por unidad completa: {money(unitPrice)}. El costo
+                  incluye ingredientes, mano de obra y costos fijos
+                  configurados.
                 </p>
                 <div className="modal-actions">
                   <button
@@ -286,7 +384,12 @@ export default function Recipes({
                   <button
                     className="btn-primary"
                     onClick={async () => {
-                      const saved = await onSell(sale, saleQty, { channel: saleChannel, method: saleMethod, notes: saleNotes, party: { ...saleParty, role: "customer" } });
+                      const saved = await onSell(sale, saleQty, {
+                        channel: saleChannel,
+                        method: saleMethod,
+                        notes: saleNotes,
+                        party: { ...saleParty, role: "customer" },
+                      });
                       if (saved !== false) setSale(null);
                     }}
                   >

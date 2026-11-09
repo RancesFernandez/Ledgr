@@ -35,18 +35,60 @@ export default function Movements({ movements, onAdd }) {
       ),
     [movements, search, filter],
   );
-  const incomeTotal = filtered.filter((m) => m.type === "income").reduce((sum, m) => sum + Number(m.amount || 0), 0);
-  const expenseTotal = filtered.filter((m) => m.type === "expense").reduce((sum, m) => sum + Number(m.amount || 0), 0);
+  const incomeTotal = filtered
+    .filter((m) => m.type === "income")
+    .reduce((sum, m) => sum + Number(m.amount || 0), 0);
+  const expenseTotal = filtered
+    .filter((m) => m.type === "expense")
+    .reduce((sum, m) => sum + Number(m.amount || 0), 0);
   const exportCsv = () => {
     const rows = [
-      [{value:"LEDGR · MOVIMIENTOS",style:"title",mergeAcross:7}],
-      [{value:`Exportado el ${new Date().toLocaleDateString("es-UY")} · Importes en UYU`,style:"subtitle",mergeAcross:7}],
-      ["Fecha", "Tipo", "Concepto", "Categoría", "Monto (UYU)", "Comprobante", "Método", "Canal"].map(value=>({value,style:"header"})),
-      ...filtered.map(m=>[m.date||"",m.type==="income"?"Ingreso":"Egreso",m.concept||"",m.category||"",{value:Number(m.amount||0),style:"money"},m.invoice||"",m.method||"",m.channel||""].map(v=>typeof v==="object"?v:{value:v,style:"text"}))
+      [{ value: "LEDGR · MOVIMIENTOS", style: "title", mergeAcross: 7 }],
+      [
+        {
+          value: `Exportado el ${new Date().toLocaleDateString("es-UY")} · Importes en UYU`,
+          style: "subtitle",
+          mergeAcross: 7,
+        },
+      ],
+      [
+        "Fecha",
+        "Tipo",
+        "Concepto",
+        "Categoría",
+        "Monto (UYU)",
+        "Comprobante",
+        "Método",
+        "Canal",
+      ].map((value) => ({ value, style: "header" })),
+      ...filtered.map((m) =>
+        [
+          m.date || "",
+          m.type === "income" ? "Ingreso" : "Egreso",
+          m.concept || "",
+          m.category || "",
+          { value: Number(m.amount || 0), style: "money" },
+          m.invoice || "",
+          m.method || "",
+          m.channel || "",
+        ].map((v) => (typeof v === "object" ? v : { value: v, style: "text" })),
+      ),
     ];
-    exportStyledWorkbook("ledgr-movimientos", [{name:"Movimientos",rows,widths:[90,65,220,110,110,120,110,100]}]);
+    exportStyledWorkbook("ledgr-movimientos", [
+      {
+        name: "Movimientos",
+        rows,
+        widths: [90, 65, 220, 110, 110, 120, 110, 100],
+      },
+    ]);
   };
-  const pagination = usePagination(filtered, page, setPage, pageSize, setPageSize);
+  const pagination = usePagination(
+    filtered,
+    page,
+    setPage,
+    pageSize,
+    setPageSize,
+  );
   return (
     <div className="page-content">
       <div className="welcome-row">
@@ -65,9 +107,22 @@ export default function Movements({ movements, onAdd }) {
         </div>
       </div>
       <div className="movement-totals">
-        <div className="movement-total-card income"><span>Ingresos {filter !== "all" || search ? "del filtro" : "totales"}</span><b>{money(incomeTotal)}</b></div>
-        <div className="movement-total-card expense"><span>Egresos {filter !== "all" || search ? "del filtro" : "totales"}</span><b>{money(expenseTotal)}</b></div>
-        <div className="movement-total-card balance"><span>Balance del listado</span><b>{money(incomeTotal - expenseTotal)}</b></div>
+        <div className="movement-total-card income">
+          <span>
+            Ingresos {filter !== "all" || search ? "del filtro" : "totales"}
+          </span>
+          <b>{money(incomeTotal)}</b>
+        </div>
+        <div className="movement-total-card expense">
+          <span>
+            Egresos {filter !== "all" || search ? "del filtro" : "totales"}
+          </span>
+          <b>{money(expenseTotal)}</b>
+        </div>
+        <div className="movement-total-card balance">
+          <span>Balance del listado</span>
+          <b>{money(incomeTotal - expenseTotal)}</b>
+        </div>
       </div>
       <div className="panel movement-panel">
         <div className="movement-toolbar">
@@ -133,7 +188,9 @@ export default function Movements({ movements, onAdd }) {
                         )}
                       </span>
                       <div className="movement-concept-copy">
-                        <b title={m.concept || "Movimiento"}>{m.concept || "Movimiento"}</b>
+                        <b title={m.concept || "Movimiento"}>
+                          {m.concept || "Movimiento"}
+                        </b>
                       </div>
                     </div>
                   </td>
@@ -148,7 +205,17 @@ export default function Movements({ movements, onAdd }) {
                     {m.type === "income" ? "+" : "−"}
                     {money(m.amount)}
                   </td>
-                  <td className="movement-action-cell"><button type="button" className="btn-small movement-detail-button" onClick={() => setSelectedMovement(m)} aria-label={`Ver detalles de ${m.concept || "movimiento"}`}><Eye size={14}/><span>Ver detalles</span></button></td>
+                  <td className="movement-action-cell">
+                    <button
+                      type="button"
+                      className="btn-small movement-detail-button"
+                      onClick={() => setSelectedMovement(m)}
+                      aria-label={`Ver detalles de ${m.concept || "movimiento"}`}
+                    >
+                      <Eye size={14} />
+                      <span>Ver detalles</span>
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -167,40 +234,179 @@ export default function Movements({ movements, onAdd }) {
         </div>
       </div>
       {pagination.controls}
-      {selectedMovement && <div className="modal-scrim" onMouseDown={(e) => e.target === e.currentTarget && setSelectedMovement(null)}>
-        <section className="modal movement-detail-modal">
-          <div className="modal-head"><div><p className="eyebrow">DETALLE DEL MOVIMIENTO</p><h2>{selectedMovement.concept || "Movimiento"}</h2><p className="muted">{selectedMovement.date || "Sin fecha"} · {selectedMovement.type === "income" ? "Ingreso" : "Egreso"}</p></div><button className="icon-button" onClick={() => setSelectedMovement(null)} aria-label="Cerrar"><X/></button></div>
-          <div className="movement-detail-amount"><span>{selectedMovement.type === "income" ? "Ingreso registrado" : "Egreso registrado"}</span><b className={selectedMovement.type}>{selectedMovement.type === "income" ? "+" : "−"}{money(selectedMovement.amount)}</b></div>
-          <div className="movement-detail-grid">
-            <div><span>Categoría</span><b>{selectedMovement.category || "—"}</b></div>
-            <div><span>Canal de venta</span><b>{selectedMovement.channel || (selectedMovement.type === "income" ? "No especificado" : "No aplica")}</b></div>
-            <div><span>Medio de pago</span><b>{selectedMovement.method || "—"}</b></div>
-            <div><span>Comprobante</span><b>{selectedMovement.invoice || "—"}</b></div>
-            {selectedMovement.quantity != null && <div><span>Cantidad</span><b>{selectedMovement.quantity} unidad(es)</b></div>}
-            {selectedMovement.estimatedCost != null && <div><span>Costo estimado</span><b>{money(selectedMovement.estimatedCost)}</b></div>}
-            {selectedMovement.estimatedProfit != null && <div><span>Ganancia estimada</span><b className={Number(selectedMovement.estimatedProfit) >= 0 ? "income" : "expense"}>{money(selectedMovement.estimatedProfit)}</b></div>}
-            {selectedMovement.inventoryPurchase?.name && <div><span>Insumo comprado</span><b>{selectedMovement.inventoryPurchase.name}</b></div>}
-            {selectedMovement.inventoryPurchase?.quantity != null && <div><span>Cantidad comprada</span><b>{selectedMovement.inventoryPurchase.quantity} {selectedMovement.inventoryPurchase.unit || "unidad(es)"}</b></div>}
-            {selectedMovement.inventoryPurchase?.unitCost != null && <div><span>Costo por unidad</span><b>{money(selectedMovement.inventoryPurchase.unitCost)}</b></div>}
-            {selectedMovement.inventoryPurchase?.totalCost != null && <div><span>Total de compra</span><b>{money(selectedMovement.inventoryPurchase.totalCost)}</b></div>}
-          </div>
-          {selectedMovement.party?.name && <section className="movement-party-detail">
-            <div className="movement-party-heading"><b>{selectedMovement.partyRole === "supplier" || selectedMovement.party.role === "supplier" ? "Proveedor asociado" : "Cliente asociado"}</b>
-              {selectedMovement.party.badge && <span className="party-badge"><Star size={12}/>{selectedMovement.party.badge}</span>}
+      {selectedMovement && (
+        <div
+          className="modal-scrim"
+          onMouseDown={(e) =>
+            e.target === e.currentTarget && setSelectedMovement(null)
+          }
+        >
+          <section className="modal movement-detail-modal">
+            <div className="modal-head">
+              <div>
+                <p className="eyebrow">DETALLE DEL MOVIMIENTO</p>
+                <h2>{selectedMovement.concept || "Movimiento"}</h2>
+                <p className="muted">
+                  {selectedMovement.date || "Sin fecha"} ·{" "}
+                  {selectedMovement.type === "income" ? "Ingreso" : "Egreso"}
+                </p>
+              </div>
+              <button
+                className="icon-button"
+                onClick={() => setSelectedMovement(null)}
+                aria-label="Cerrar"
+              >
+                <X />
+              </button>
+            </div>
+            <div className="movement-detail-amount">
+              <span>
+                {selectedMovement.type === "income"
+                  ? "Ingreso registrado"
+                  : "Egreso registrado"}
+              </span>
+              <b className={selectedMovement.type}>
+                {selectedMovement.type === "income" ? "+" : "−"}
+                {money(selectedMovement.amount)}
+              </b>
             </div>
             <div className="movement-detail-grid">
-              <div><span>Nombre</span><b>{selectedMovement.party.name}</b></div>
-              <div><span>Teléfono</span><b>{selectedMovement.party.phone || "—"}</b></div>
-              <div><span>Correo</span><b>{selectedMovement.party.email || "—"}</b></div>
-              <div><span>Documento / RUT</span><b>{selectedMovement.party.taxId || "—"}</b></div>
-              <div className="span-2"><span>Dirección</span><b>{selectedMovement.party.address || "—"}</b></div>
-              <div className="span-2"><span>Observaciones de la persona</span><b>{selectedMovement.party.notes || "—"}</b></div>
+              <div>
+                <span>Categoría</span>
+                <b>{selectedMovement.category || "—"}</b>
+              </div>
+              <div>
+                <span>Canal de venta</span>
+                <b>
+                  {selectedMovement.channel ||
+                    (selectedMovement.type === "income"
+                      ? "No especificado"
+                      : "No aplica")}
+                </b>
+              </div>
+              <div>
+                <span>Medio de pago</span>
+                <b>{selectedMovement.method || "—"}</b>
+              </div>
+              <div>
+                <span>Comprobante</span>
+                <b>{selectedMovement.invoice || "—"}</b>
+              </div>
+              {selectedMovement.quantity != null && (
+                <div>
+                  <span>Cantidad</span>
+                  <b>{selectedMovement.quantity} unidad(es)</b>
+                </div>
+              )}
+              {selectedMovement.estimatedCost != null && (
+                <div>
+                  <span>Costo estimado</span>
+                  <b>{money(selectedMovement.estimatedCost)}</b>
+                </div>
+              )}
+              {selectedMovement.estimatedProfit != null && (
+                <div>
+                  <span>Ganancia estimada</span>
+                  <b
+                    className={
+                      Number(selectedMovement.estimatedProfit) >= 0
+                        ? "income"
+                        : "expense"
+                    }
+                  >
+                    {money(selectedMovement.estimatedProfit)}
+                  </b>
+                </div>
+              )}
+              {selectedMovement.inventoryPurchase?.name && (
+                <div>
+                  <span>Insumo comprado</span>
+                  <b>{selectedMovement.inventoryPurchase.name}</b>
+                </div>
+              )}
+              {selectedMovement.inventoryPurchase?.quantity != null && (
+                <div>
+                  <span>Cantidad comprada</span>
+                  <b>
+                    {selectedMovement.inventoryPurchase.quantity}{" "}
+                    {selectedMovement.inventoryPurchase.unit || "unidad(es)"}
+                  </b>
+                </div>
+              )}
+              {selectedMovement.inventoryPurchase?.unitCost != null && (
+                <div>
+                  <span>Costo por unidad</span>
+                  <b>{money(selectedMovement.inventoryPurchase.unitCost)}</b>
+                </div>
+              )}
+              {selectedMovement.inventoryPurchase?.totalCost != null && (
+                <div>
+                  <span>Total de compra</span>
+                  <b>{money(selectedMovement.inventoryPurchase.totalCost)}</b>
+                </div>
+              )}
             </div>
-          </section>}
-          <div className="movement-detail-notes"><span>Descripción y observaciones</span><p>{selectedMovement.notes || "No se agregaron observaciones."}</p></div>
-          <div className="modal-actions"><button className="btn-primary" onClick={() => setSelectedMovement(null)}>Cerrar</button></div>
-        </section>
-      </div>}
+            {selectedMovement.party?.name && (
+              <section className="movement-party-detail">
+                <div className="movement-party-heading">
+                  <b>
+                    {selectedMovement.partyRole === "supplier" ||
+                    selectedMovement.party.role === "supplier"
+                      ? "Proveedor asociado"
+                      : "Cliente asociado"}
+                  </b>
+                  {selectedMovement.party.badge && (
+                    <span className="party-badge">
+                      <Star size={12} />
+                      {selectedMovement.party.badge}
+                    </span>
+                  )}
+                </div>
+                <div className="movement-detail-grid">
+                  <div>
+                    <span>Nombre</span>
+                    <b>{selectedMovement.party.name}</b>
+                  </div>
+                  <div>
+                    <span>Teléfono</span>
+                    <b>{selectedMovement.party.phone || "—"}</b>
+                  </div>
+                  <div>
+                    <span>Correo</span>
+                    <b>{selectedMovement.party.email || "—"}</b>
+                  </div>
+                  <div>
+                    <span>Documento / RUT</span>
+                    <b>{selectedMovement.party.taxId || "—"}</b>
+                  </div>
+                  <div className="span-2">
+                    <span>Dirección</span>
+                    <b>{selectedMovement.party.address || "—"}</b>
+                  </div>
+                  <div className="span-2">
+                    <span>Observaciones de la persona</span>
+                    <b>{selectedMovement.party.notes || "—"}</b>
+                  </div>
+                </div>
+              </section>
+            )}
+            <div className="movement-detail-notes">
+              <span>Descripción y observaciones</span>
+              <p>
+                {selectedMovement.notes || "No se agregaron observaciones."}
+              </p>
+            </div>
+            <div className="modal-actions">
+              <button
+                className="btn-primary"
+                onClick={() => setSelectedMovement(null)}
+              >
+                Cerrar
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   );
 }

@@ -34,20 +34,36 @@ export default function Dashboard({
   onNavigate,
 }) {
   const currentMonth = new Date().toISOString().slice(0, 7);
-  const periodMovements = movements.filter((x) => String(x.date || "").startsWith(currentMonth));
-  const income = periodMovements.filter((x) => x.type === "income").reduce((s, x) => s + Number(x.amount || 0), 0);
-  const expenses = periodMovements.filter((x) => x.type === "expense").reduce((s, x) => s + Number(x.amount || 0), 0);
+  const periodMovements = movements.filter((x) =>
+    String(x.date || "").startsWith(currentMonth),
+  );
+  const income = periodMovements
+    .filter((x) => x.type === "income")
+    .reduce((s, x) => s + Number(x.amount || 0), 0);
+  const expenses = periodMovements
+    .filter((x) => x.type === "expense")
+    .reduce((s, x) => s + Number(x.amount || 0), 0);
   const net = income - expenses;
   const chart = movements
     .filter((m) => {
       const date = new Date(`${m.date}T12:00:00`);
-      return !Number.isNaN(date.getTime()) && (Date.now() - date.getTime()) <= 7 * 86400000;
+      return (
+        !Number.isNaN(date.getTime()) &&
+        Date.now() - date.getTime() <= 7 * 86400000
+      );
     })
     .reduce((days, m) => {
       const key = m.date;
       let day = days.find((x) => x.date === key);
       if (!day) {
-        day = { date: key, day: new Intl.DateTimeFormat("es-UY", { weekday: "short" }).format(new Date(`${key}T12:00:00`)), income: 0, expense: 0 };
+        day = {
+          date: key,
+          day: new Intl.DateTimeFormat("es-UY", { weekday: "short" }).format(
+            new Date(`${key}T12:00:00`),
+          ),
+          income: 0,
+          expense: 0,
+        };
         days.push(day);
       }
       day[m.type === "income" ? "income" : "expense"] += Number(m.amount || 0);
@@ -70,7 +86,16 @@ export default function Dashboard({
     <div className="page-content">
       <div className="welcome-row">
         <div>
-          <p className="eyebrow">{new Intl.DateTimeFormat("es-UY", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date()).toLocaleUpperCase("es-UY")}</p>
+          <p className="eyebrow">
+            {new Intl.DateTimeFormat("es-UY", {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            })
+              .format(new Date())
+              .toLocaleUpperCase("es-UY")}
+          </p>
           <h1>Tu negocio, en perspectiva.</h1>
           <p className="muted">
             Un vistazo claro a la actividad de tu negocio.
@@ -88,16 +113,78 @@ export default function Dashboard({
           </button>
         </div>
       </div>
-      <section className="period-summary" aria-label="Resumen financiero del mes">
+      <section
+        className="period-summary"
+        aria-label="Resumen financiero del mes"
+      >
         <div className="period-summary-heading">
-          <div><h2>Ingresos y gastos del período</h2><p>Resumen de {new Intl.DateTimeFormat("es-UY", { month: "long", year: "numeric" }).format(new Date())}. Los movimientos fuera de este mes no se incluyen.</p></div>
-          <button className="text-action" onClick={() => onNavigate("movements")}>Ver movimientos →</button>
+          <div>
+            <h2>Ingresos y gastos del período</h2>
+            <p>
+              Resumen de{" "}
+              {new Intl.DateTimeFormat("es-UY", {
+                month: "long",
+                year: "numeric",
+              }).format(new Date())}
+              . Los movimientos fuera de este mes no se incluyen.
+            </p>
+          </div>
+          <button
+            className="text-action"
+            onClick={() => onNavigate("movements")}
+          >
+            Ver movimientos →
+          </button>
         </div>
         <div className="period-summary-values">
-          <div className="period-value income-value"><span><i/>Ingresos</span><strong>{money(income)}</strong><small>{periodMovements.filter((x) => x.type === "income").length} movimientos</small></div>
-          <div className="period-value expense-value"><span><i/>Gastos</span><strong>{money(expenses)}</strong><small>{periodMovements.filter((x) => x.type === "expense").length} movimientos</small></div>
-          <div className={`period-value result-value ${net < 0 ? "negative-result" : ""}`}><span><i/>Resultado del período</span><strong>{money(net)}</strong><small>{net >= 0 ? "Ingresos menos gastos" : "Los gastos superan los ingresos"}</small></div>
-          <div className="period-value margin-value"><span><i/>Margen sobre ingresos</span><strong>{income > 0 ? `${((net / income) * 100).toLocaleString("es-UY", { maximumFractionDigits: 1 })}%` : "—"}</strong><small>Resultado ÷ ingresos</small></div>
+          <div className="period-value income-value">
+            <span>
+              <i />
+              Ingresos
+            </span>
+            <strong>{money(income)}</strong>
+            <small>
+              {periodMovements.filter((x) => x.type === "income").length}{" "}
+              movimientos
+            </small>
+          </div>
+          <div className="period-value expense-value">
+            <span>
+              <i />
+              Gastos
+            </span>
+            <strong>{money(expenses)}</strong>
+            <small>
+              {periodMovements.filter((x) => x.type === "expense").length}{" "}
+              movimientos
+            </small>
+          </div>
+          <div
+            className={`period-value result-value ${net < 0 ? "negative-result" : ""}`}
+          >
+            <span>
+              <i />
+              Resultado del período
+            </span>
+            <strong>{money(net)}</strong>
+            <small>
+              {net >= 0
+                ? "Ingresos menos gastos"
+                : "Los gastos superan los ingresos"}
+            </small>
+          </div>
+          <div className="period-value margin-value">
+            <span>
+              <i />
+              Margen sobre ingresos
+            </span>
+            <strong>
+              {income > 0
+                ? `${((net / income) * 100).toLocaleString("es-UY", { maximumFractionDigits: 1 })}%`
+                : "—"}
+            </strong>
+            <small>Resultado ÷ ingresos</small>
+          </div>
         </div>
       </section>
       <div className="dashboard-grid">
@@ -123,61 +210,81 @@ export default function Dashboard({
             </span>
           </div>
           <div className="chart-wrap">
-            {chart.length ? <ResponsiveContainer width="100%" height="100%">
-              <AreaChart
-                data={chart}
-                margin={{ top: 10, right: 4, left: -18, bottom: 0 }}
-              >
-                <defs>
-                  <linearGradient id="incomeFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#3c8c70" stopOpacity={0.18} />
-                    <stop offset="95%" stopColor="#3c8c70" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="expenseFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#c98078" stopOpacity={0.14} />
-                    <stop offset="95%" stopColor="#c98078" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid stroke="#eeece6" vertical={false} />
-                <XAxis
-                  dataKey="day"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "#8c8c83", fontSize: 12 }}
-                  dy={10}
-                />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "#8c8c83", fontSize: 11 }}
-                  tickFormatter={(v) => `${v / 1000}k`}
-                />
-                <Tooltip
-                  formatter={(v) => money(v)}
-                  contentStyle={{
-                    border: "1px solid #e8e5dc",
-                    borderRadius: 12,
-                    fontSize: 12,
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="income"
-                  name="Ingresos"
-                  stroke="#3c8c70"
-                  strokeWidth={2.5}
-                  fill="url(#incomeFill)"
-                />
-                <Area
-                  type="monotone"
-                  dataKey="expense"
-                  name="Gastos"
-                  stroke="#c98078"
-                  strokeWidth={2.5}
-                  fill="url(#expenseFill)"
-                />
-              </AreaChart>
-            </ResponsiveContainer> : <div className="empty-chart">Los movimientos de los últimos 7 días aparecerán aquí.</div>}
+            {chart.length ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart
+                  data={chart}
+                  margin={{ top: 10, right: 4, left: -18, bottom: 0 }}
+                >
+                  <defs>
+                    <linearGradient id="incomeFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop
+                        offset="0%"
+                        stopColor="#3c8c70"
+                        stopOpacity={0.18}
+                      />
+                      <stop offset="95%" stopColor="#3c8c70" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient
+                      id="expenseFill"
+                      x1="0"
+                      y1="0"
+                      x2="0"
+                      y2="1"
+                    >
+                      <stop
+                        offset="0%"
+                        stopColor="#c98078"
+                        stopOpacity={0.14}
+                      />
+                      <stop offset="95%" stopColor="#c98078" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid stroke="#eeece6" vertical={false} />
+                  <XAxis
+                    dataKey="day"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: "#8c8c83", fontSize: 12 }}
+                    dy={10}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: "#8c8c83", fontSize: 11 }}
+                    tickFormatter={(v) => `${v / 1000}k`}
+                  />
+                  <Tooltip
+                    formatter={(v) => money(v)}
+                    contentStyle={{
+                      border: "1px solid #e8e5dc",
+                      borderRadius: 12,
+                      fontSize: 12,
+                    }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="income"
+                    name="Ingresos"
+                    stroke="#3c8c70"
+                    strokeWidth={2.5}
+                    fill="url(#incomeFill)"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="expense"
+                    name="Gastos"
+                    stroke="#c98078"
+                    strokeWidth={2.5}
+                    fill="url(#expenseFill)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="empty-chart">
+                Los movimientos de los últimos 7 días aparecerán aquí.
+              </div>
+            )}
           </div>
         </section>
         <section className="panel alert-panel">
@@ -210,7 +317,11 @@ export default function Dashboard({
                 </button>
               </div>
             ))}
-            {!alerts.length && <p className="muted empty-inline">Todavía no hay alertas. Al registrar insumos se mostrarán aquí.</p>}
+            {!alerts.length && (
+              <p className="muted empty-inline">
+                Todavía no hay alertas. Al registrar insumos se mostrarán aquí.
+              </p>
+            )}
           </div>
           <button
             className="panel-link"
@@ -272,7 +383,13 @@ export default function Dashboard({
                     </td>
                   </tr>
                 ))}
-                {!movements.length && <tr><td colSpan="4" className="empty-table">Todavía no registraste movimientos.</td></tr>}
+                {!movements.length && (
+                  <tr>
+                    <td colSpan="4" className="empty-table">
+                      Todavía no registraste movimientos.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -312,10 +429,7 @@ export default function Dashboard({
           </button>
         </section>
       </div>
-      <footer className="app-footer">
-        
-        
-      </footer>
+      <footer className="app-footer"></footer>
     </div>
   );
 }

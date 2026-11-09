@@ -72,21 +72,20 @@ export default function Auth({ onDemo }) {
             también <em>rinda.</em>
           </h1>
           <p>
-            Finanzas, y stock en un solo lugar. Pensado para quienes
-            hacen rendir su emprendimiento.
+            Finanzas, y stock en un solo lugar. Pensado para quienes hacen
+            rendir su emprendimiento.
           </p>
           <div className="auth-quote">
             <span>“</span>
             <div>
               <p>
-                Conocer el costo real cambia la forma en que
-                hacés crecer tu negocio.
+                Conocer el costo real cambia la forma en que hacés crecer tu
+                negocio.
               </p>
               <small>LEDGR · FINANZAS</small>
             </div>
           </div>
         </div>
-        
       </div>
       <div className="auth-right">
         <div className="auth-form-wrap">

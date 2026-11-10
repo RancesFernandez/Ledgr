@@ -34,7 +34,7 @@ import Auth from "./components/Auth";
 const titles = {
   dashboard: "Resumen general",
   movements: "Movimientos",
-  recipes: "Recetario y costos",
+  recipes: "Productos y costos",
   inventory: "Inventario",
   reports: "Reportes",
 };
@@ -235,7 +235,7 @@ export default function App() {
           const existing = await tx.get(ref);
           if (existing.exists())
             throw new Error(
-              `Ya existe ${type === "ingredients" ? "un insumo" : "una receta"} con ese nombre. Revisá el registro existente para evitar duplicados.`,
+              `Ya existe ${type === "ingredients" ? "un insumo" : "un producto"} con ese nombre. Revisá el registro existente para evitar duplicados.`,
             );
           tx.set(ref, {
             ...data,
@@ -483,7 +483,7 @@ export default function App() {
         p.map((r) => (r.id === original.id ? { ...r, ...data, id: r.id } : r)),
       );
       setRecipeToEdit(null);
-      notify("Receta actualizada en esta sesión local.");
+      notify("Producto actualizado en esta sesión local.");
       return true;
     }
     try {
@@ -496,31 +496,31 @@ export default function App() {
         p.map((r) => (r.id === original.id ? { ...r, ...data, id: r.id } : r)),
       );
       setRecipeToEdit(null);
-      notify("Receta actualizada correctamente.");
+      notify("Producto actualizado correctamente.");
       return true;
     } catch (e) {
-      notify("No se pudo editar la receta: " + e.message);
+      notify("No se pudo editar el producto: " + e.message);
       return null;
     }
   }
   async function deleteRecipe(recipe) {
     if (
       !window.confirm(
-        `¿Eliminar la receta “${recipe.name}”? Las ventas y movimientos ya registrados se conservarán.`,
+        `¿Eliminar el producto “${recipe.name}”? Las ventas y movimientos ya registrados se conservarán.`,
       )
     )
       return;
     if (isDemo) {
       setRecipes((p) => p.filter((r) => r.id !== recipe.id));
-      notify("Receta eliminada de esta sesión.");
+      notify("Producto eliminado de esta sesión.");
       return;
     }
     try {
       await deleteDoc(doc(db, "users", user.uid, "recipes", recipe.id));
       setRecipes((p) => p.filter((r) => r.id !== recipe.id));
-      notify("Receta eliminada. Los movimientos históricos se conservaron.");
+      notify("Producto eliminado. Los movimientos históricos se conservaron.");
     } catch (e) {
-      notify("No se pudo eliminar la receta: " + e.message);
+      notify("No se pudo eliminar el producto: " + e.message);
     }
   }
   async function adjustStock(id, qty, direction, cost, reason) {

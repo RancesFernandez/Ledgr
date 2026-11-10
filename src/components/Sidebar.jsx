@@ -15,7 +15,7 @@ import {
 const items = [
   ["dashboard", "Resumen", LayoutDashboard],
   ["movements", "Movimientos", ArrowLeftRight],
-  ["recipes", "Recetario y costos", ChefHat],
+  ["recipes", "Productos y costos", ChefHat],
   ["inventory", "Inventario", Boxes],
   ["reports", "Reportes", ChartNoAxesCombined],
 ];
@@ -64,10 +64,6 @@ export default function Sidebar({
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <div className="help-link">
-            <CircleHelp size={17} />
-            <span>Centro de ayuda</span>
-          </div>
           <div className="profile">
             <div className="avatar">
               {(user?.email || "D").slice(0, 1).toUpperCase()}

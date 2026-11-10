@@ -54,14 +54,14 @@ export default function Recipes({
     <div className="page-content">
       <div className="welcome-row">
         <div>
-          <p className="eyebrow">RECETARIO Y COSTEO DINÁMICO</p>
-          <h1>Recetas que cierran.</h1>
+          <p className="eyebrow">PRODUCTOS Y COSTEO DINÁMICO</p>
+          <h1>Productos que cierran.</h1>
           <p className="muted">
-            Costeá cada preparación con sus ingredientes y mano de obra.
+            Calculá costos, precios y rentabilidad de tus productos.
           </p>
         </div>
         <button className="btn-primary" onClick={onAdd}>
-          <Plus size={17} /> Crear receta
+          <Plus size={17} /> Crear producto
         </button>
       </div>
       <div className="recipe-intro">
@@ -72,7 +72,7 @@ export default function Recipes({
           <b>Costos conectados al inventario</b>
           <p>
             Cuando actualices el costo de un insumo, el costo estimado de las
-            recetas que lo usan se recalcula.
+            productos que lo usan se recalcula.
           </p>
         </div>
         <span className="live-tag">
@@ -85,7 +85,7 @@ export default function Recipes({
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar en tu recetario…"
+            placeholder="Buscar en productos…"
           />
         </div>
         <button className="btn-secondary" onClick={() => setSearch("")}>
@@ -206,7 +206,7 @@ export default function Recipes({
                     </button>
                     <button
                       className="btn-small recipe-delete"
-                      title="Eliminar esta receta. Las ventas ya registradas no se borran."
+                      title="Eliminar este producto. Las ventas ya registradas no se borran."
                       onClick={() => onDelete(r)}
                     >
                       <Trash2 size={14} /> Eliminar
@@ -242,8 +242,8 @@ export default function Recipes({
       {!rows.length && (
         <div className="empty-state">
           <ChefHat size={26} />
-          <b>Tu recetario empieza acá</b>
-          <span>Creá una receta para calcular costos y márgenes.</span>
+          <b>Tu catálogo empieza acá</b>
+          <span>Creá un producto para calcular costos y márgenes.</span>
         </div>
       )}
       {sale &&

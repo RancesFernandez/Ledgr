@@ -160,7 +160,7 @@ export default function Dashboard({
             </small>
           </div>
           <div
-            className={`period-value result-value ${net < 0 ? "negative-result" : ""}`}
+            className={`period-value result-value ${net < 0 ? "negative-result loss-value" : "profit-value"}`}
           >
             <span>
               <i />
@@ -398,7 +398,7 @@ export default function Dashboard({
           <div className="panel-heading">
             <div>
               <h2>Productos con mejor margen</h2>
-              <p className="muted">Según el costo estimado de receta.</p>
+              <p className="muted">Según el costo estimado del producto.</p>
             </div>
             <button
               className="icon-button"
@@ -417,12 +417,12 @@ export default function Dashboard({
                 </div>
                 <div className="profit-value">
                   <b>{money(r.price - r.cost)}</b>
-                  <small>margen por receta</small>
+                  <small>margen por producto</small>
                 </div>
               </div>
             ))
           ) : (
-            <p className="muted">Agregá recetas para comparar rentabilidad.</p>
+            <p className="muted">Agregá productos para comparar rentabilidad.</p>
           )}
           <button className="panel-link" onClick={() => onNavigate("reports")}>
             Explorar rentabilidad <span>→</span>

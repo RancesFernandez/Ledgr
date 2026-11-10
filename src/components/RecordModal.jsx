@@ -203,13 +203,13 @@ export default function RecordModal({
         <div className="modal-head">
           <div>
             <p className="eyebrow">
-              {isRecipe ? "RECETARIO" : "MATERIAS PRIMAS"}
+              {isRecipe ? "PRODUCTOS Y COSTOS" : "MATERIAS PRIMAS"}
             </p>
             <h2>
               {isRecipe
                 ? initialData
-                  ? "Editar receta"
-                  : "Crear receta"
+                  ? "Editar producto"
+                  : "Crear producto"
                 : initialData
                   ? "Editar insumo"
                   : "Agregar insumo"}
@@ -228,9 +228,9 @@ export default function RecordModal({
           <div className="form-grid">
             <label
               className="span-2"
-              data-tooltip="Nombre claro para identificar este registro en el recetario o inventario."
+              data-tooltip="Nombre claro para identificar este producto o insumo."
             >
-              {isRecipe ? "Nombre de la receta" : "Nombre del insumo"}{" "}
+              {isRecipe ? "Nombre del producto" : "Nombre del insumo"}{" "}
               <HelpCircle size={13} />
               <input
                 required
@@ -254,7 +254,7 @@ export default function RecordModal({
                     onChange={(e) => update("yield", e.target.value)}
                   />
                 </label>
-                <label data-tooltip="Costo total del tiempo de trabajo para preparar toda la receta. Si no querés incluirlo, dejalo en cero.">
+                <label data-tooltip="Costo total del tiempo de trabajo para elaborar todo el producto. Si no querés incluirlo, dejalo en cero.">
                   Mano de obra total (UYU)
                   <input
                     type="number"
@@ -263,7 +263,7 @@ export default function RecordModal({
                     onChange={(e) => update("labor", e.target.value)}
                   />
                 </label>
-                <label data-tooltip="Costo adicional de la receta, por ejemplo energía o empaque. Podés calcularlo como porcentaje o como importe fijo.">
+                <label data-tooltip="Costo adicional del producto, por ejemplo energía o empaque. Podés calcularlo como porcentaje o como importe fijo.">
                   Tipo de costo adicional
                   <select
                     value={form.overheadMode || "percent"}
@@ -344,7 +344,7 @@ export default function RecordModal({
                 </label>
                 <div className="span-2 recipe-image-field">
                   <div className="recipe-image-heading">
-                    <strong>Foto de la receta</strong>
+                    <strong>Imagen del producto</strong>
                     <span>Opcional · JPG, PNG o WebP</span>
                   </div>
                   <div className="recipe-image-uploader">
@@ -402,11 +402,11 @@ export default function RecordModal({
                 </div>
                 <div
                   className="span-2 ingredient-picker"
-                  title="Elegí los insumos y la cantidad que consume la receta completa."
+                  title="Elegí los insumos y la cantidad que consume el producto completo."
                 >
-                  <b>Ingredientes de esta receta</b>
+                  <b>Insumos de este producto</b>
                   <p className="muted form-help">
-                    La cantidad corresponde a la receta completa, no a una
+                    La cantidad corresponde al producto completo, no a una
                     porción. Los costos se calculan usando los costos unitarios
                     del inventario.
                   </p>
@@ -425,7 +425,7 @@ export default function RecordModal({
                       {form.ingredients.some((x) => x.id === i.id) && (
                         <input
                           aria-label={`Cantidad de ${i.name}`}
-                          title={`Cantidad de ${i.unit} de ${i.name} que usa la receta completa.`}
+                          title={`Cantidad de ${i.unit} de ${i.name} que usa el producto completo.`}
                           type="number"
                           min={isCountUnit(i.unit) ? "1" : "0.01"}
                           step={isCountUnit(i.unit) ? "1" : "0.01"}
@@ -496,7 +496,7 @@ export default function RecordModal({
                   />
                 </label>
                 {!initialData && (
-                  <label className="span-2 inventory-expense-question">
+                  <label className="span-2 inventory-expense-question compact-check">
                     <input
                       type="checkbox"
                       checked={registerInitialExpense}
@@ -525,7 +525,7 @@ export default function RecordModal({
                 ? "Optimizando imagen…"
                 : saving
                   ? "Guardando…"
-                  : `${initialData ? "Guardar cambios" : "Guardar"} ${isRecipe ? "receta" : "insumo"}`}
+                  : `${initialData ? "Guardar cambios" : "Guardar"} ${isRecipe ? "producto" : "insumo"}`}
             </button>
           </div>
         </form>

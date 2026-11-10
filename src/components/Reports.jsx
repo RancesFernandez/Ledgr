@@ -119,7 +119,7 @@ export default function Reports({ movements, recipes, ingredients }) {
     const recipeRows = [
       [
         {
-          value: "LEDGR · RENTABILIDAD DE RECETAS",
+          value: "LEDGR · RENTABILIDAD DE PRODUCTOS",
           style: "title",
           mergeAcross: 6,
         },
@@ -132,7 +132,7 @@ export default function Reports({ movements, recipes, ingredients }) {
         },
       ],
       [
-        "Receta",
+        "Producto",
         "Rinde (porciones)",
         "Costo elaboración",
         "Costo producto completo",
@@ -212,7 +212,7 @@ export default function Reports({ movements, recipes, ingredients }) {
           <p className="eyebrow">ANÁLISIS Y DECISIONES</p>
           <h1>Los números cuentan.</h1>
           <p className="muted">
-            Resumen financiero, rentabilidad de recetas e inventario en un
+            Resumen financiero, rentabilidad de productos e inventario en un
             archivo Excel con formato.
           </p>
         </div>
@@ -332,7 +332,7 @@ export default function Reports({ movements, recipes, ingredients }) {
             ))
           ) : (
             <p className="muted">
-              Agregá recetas para conocer la rentabilidad.
+              Agregá productos para conocer la rentabilidad.
             </p>
           )}
         </section>
@@ -344,7 +344,7 @@ export default function Reports({ movements, recipes, ingredients }) {
             </div>
             <TriangleAlert size={19} />
           </div>
-          <div className="loss-total">
+          <div className="loss-total loss-money">
             {money(
               movements
                 .filter((m) => m.category === "Merma")

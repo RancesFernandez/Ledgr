@@ -20,7 +20,7 @@ label[data-tooltip]{cursor:help}
 @media(max-width:600px){.topbar-date{font-size:13px}.sale-summary-grid{grid-template-columns:1fr 1fr}.sale-summary-grid b{font-size:16px}}
 
 
-/* Recetario: imágenes, acciones y ayudas de formulario */
+/* Productos: imágenes, acciones y ayudas de formulario */
 .recipe-card-image {
   position: absolute;
   inset: 0;
@@ -295,3 +295,648 @@ input:focus,select:focus,textarea:focus{border-color:#8da6cf!important;box-shado
 .movement-party-detail{margin:14px 0;padding:15px;border:1px solid var(--line,#e8e9ec);border-radius:12px}
 .movement-party-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
 .movement-party-detail .movement-detail-grid{margin:0}
+
+/* =========================================================
+   UI refresh — Ledgr
+   ========================================================= */
+:root{
+  --income:#198754;
+  --income-soft:#eaf7ef;
+  --expense:#c84b4b;
+  --expense-soft:#fceeee;
+  --profit:#0f6b4f;
+  --profit-soft:#e7f5ef;
+  --loss:#a9343d;
+  --loss-soft:#fbe9eb;
+  --accent:#3f7f5d;
+  --accent-soft:#edf6f0;
+  --surface:#ffffff;
+  --surface-2:#f7f9f8;
+  --line-strong:#dfe6e1;
+}
+body{background:#f5f7f6;color:#26302a}
+.main-area{background:linear-gradient(180deg,#f7f9f8 0%,#f4f6f5 100%)}
+.sidebar,.topbar{background:rgba(255,255,255,.94)}
+.sidebar{border-right-color:#e1e8e3}
+.brand-mark{background:var(--accent-soft);color:var(--accent)}
+.nav-item:hover{background:#f0f6f2}
+.nav-item.active{background:#e8f3ec;color:var(--accent)}
+.nav-item.active:before{background:var(--accent)}
+.btn-primary{border-color:var(--accent);background:var(--accent);box-shadow:0 5px 14px rgba(47,113,78,.16)}
+.btn-primary:hover{background:#326d4e}
+.btn-secondary{border-color:#dfe5e1;background:#fff;color:#465149}
+.btn-secondary:hover{background:#f4f7f5;border-color:#cdd8d1}
+.panel,.stat-card,.report-kpi,.movement-total-card,.recipe-card{border-color:#e0e7e2;box-shadow:0 4px 18px rgba(31,53,40,.035)}
+.stat-card,.panel{transition:box-shadow .18s ease,border-color .18s ease,transform .18s ease}
+.stat-card:hover,.recipe-card:hover{border-color:#cfdcd4;box-shadow:0 10px 28px rgba(31,53,40,.07)}
+.stat-icon.mint{background:var(--income-soft);color:var(--income)}
+.stat-icon.rose{background:var(--expense-soft);color:var(--expense)}
+.stat-icon.lilac{background:#edf1f8;color:#5b7195}
+.stat-icon.sand{background:#f8f1e3;color:#9a743d}
+
+/* Dinero: ingresos y egresos */
+.amount-cell.income,.movement-total-card.income b,.report-kpi.income-kpi>b,
+.period-value.income-value strong{color:var(--income)!important}
+.amount-cell.expense,.movement-total-card.expense b,.report-kpi.expense-kpi>b,
+.period-value.expense-value strong{color:var(--expense)!important}
+/* Ganancias / pérdidas: tonos distintos para diferenciarlas del flujo */
+.profit-value strong,.movement-total-card.profit-total b,.report-kpi.profit-kpi>b,
+.profit-money b,.rank-money.profit-money b,.positive{color:var(--profit)!important}
+.loss-value strong,.movement-total-card.loss-total-card b,.report-kpi.loss-kpi>b,
+.loss-money,.loss-money b,.negative{color:var(--loss)!important}
+.profit-total{background:linear-gradient(135deg,#fff 0%,var(--profit-soft) 100%)}
+.loss-total-card{background:linear-gradient(135deg,#fff 0%,var(--loss-soft) 100%)}
+.report-kpi.income-kpi{background:linear-gradient(135deg,#fff 0%,#f2faf5 100%)}
+.report-kpi.expense-kpi{background:linear-gradient(135deg,#fff 0%,#fff5f5 100%)}
+.report-kpi.profit-kpi{background:linear-gradient(135deg,#fff 0%,#eef9f4 100%)}
+.report-kpi.loss-kpi{background:linear-gradient(135deg,#fff 0%,#fff0f2 100%)}
+.period-value.income-value i{background:var(--income)!important}
+.period-value.expense-value i{background:var(--expense)!important}
+.period-value.profit-value i{background:var(--profit)!important}
+.period-value.loss-value i{background:var(--loss)!important}
+
+/* Listas / tablas */
+.data-table thead th{background:#fafcfb;color:#7c887f;border-bottom-color:#e3e9e5}
+.data-table tbody tr{transition:background .15s ease}
+.data-table tbody tr:hover{background:#f8fbf9}
+.data-table tbody td{border-bottom-color:#edf1ee}
+.category-pill{background:#f1f5f2;color:#617067;border:1px solid #e2e9e4}
+.table-scroll,.movement-table-wrap{border-radius:12px}
+.status-pill.good{background:var(--income-soft);color:#187346}
+.status-pill.low{background:var(--expense-soft);color:#b23f43}
+.ingredient-symbol{background:#edf6f0;color:#397352}
+.stock-meter{background:#e8eeea}
+.search-box{height:40px;border-radius:10px;border-color:#dfe6e1;background:#fff;box-shadow:0 2px 8px rgba(35,54,43,.025)}
+.search-box:focus-within{border-color:#94b7a1;box-shadow:0 0 0 4px #eaf4ed}
+.search-box input{font-size:11px}
+.filter-tabs{background:#edf2ef;border:1px solid #e0e7e2}
+.filter-tabs button{border-radius:7px}
+.filter-tabs button.on{color:var(--accent);box-shadow:0 2px 7px rgba(29,57,41,.08)}
+.table-bottom{border-top-color:#e5ebe7}
+
+/* Forms: más aire, jerarquía y controles consistentes */
+.modal-scrim{background:rgba(20,29,24,.58);backdrop-filter:blur(7px)}
+.modal{border:1px solid #dde6e0;border-radius:20px;padding:27px;box-shadow:0 28px 90px rgba(16,35,24,.22)}
+.modal-head{padding-bottom:18px;border-bottom:1px solid #edf1ee;margin-bottom:21px}
+.modal-head h2{font-size:21px}
+.modal form>label,.form-grid>label,.auth-form-wrap form>label{font-size:10px;color:#4f5c53;gap:8px}
+.form-grid{gap:17px}
+.form-grid input,.form-grid select,.form-grid textarea,.modal form>label input,.modal form>label select,.auth-form-wrap form input{
+  min-height:42px;border:1px solid #dce5df;border-radius:10px;background:#fbfcfb;padding:11px 12px;
+  box-shadow:inset 0 1px 2px rgba(20,35,26,.025);transition:border-color .15s,box-shadow .15s,background .15s;
+}
+.form-grid textarea{min-height:86px}
+.form-grid input:hover,.form-grid select:hover,.form-grid textarea:hover{border-color:#cbd8d0;background:#fff}
+.form-grid input:focus,.form-grid select:focus,.form-grid textarea:focus,.modal form>label input:focus,.modal form>label select:focus{
+  border-color:#79a58a;box-shadow:0 0 0 4px #eaf4ed;background:#fff;
+}
+.form-grid select,.modal form>label select{cursor:pointer}
+.modal-actions{margin-top:26px;padding-top:19px;border-top:1px solid #e7ede9}
+.modal-actions .btn-primary,.modal-actions .btn-secondary{min-height:42px;border-radius:10px;padding-inline:16px}
+
+/* Selector de tipo */
+.type-switch{background:#eef3f0;border:1px solid #e0e8e3;padding:5px;border-radius:12px}
+.type-switch button{min-height:42px;border-radius:9px}
+.type-switch button.selected.income{color:var(--income);border-color:#cde7d7;background:#fff}
+.type-switch button.selected.expense{color:var(--expense);border-color:#f0d2d2;background:#fff}
+
+/* Bloques seleccionables y listas de insumos */
+.inventory-purchase-toggle,.inventory-expense-question{
+  border:1px solid #d9e7de!important;background:linear-gradient(135deg,#f8fcf9,#eff7f2)!important;
+  border-radius:12px!important;padding:13px 14px!important;box-shadow:0 3px 12px rgba(40,90,59,.045);
+}
+.inventory-purchase-toggle{margin-bottom:19px!important}
+.inventory-purchase-toggle input,.inventory-expense-question input{
+  width:16px!important;height:16px!important;margin:2px 0 0!important;accent-color:var(--accent);cursor:pointer;
+}
+.inventory-purchase-toggle>svg{color:var(--accent);margin-top:0}
+.inventory-purchase-toggle b,.inventory-expense-question b{font-size:11px}
+.inventory-purchase-toggle small,.inventory-expense-question small{font-size:9px;line-height:1.55}
+.inventory-expense-question.compact{
+  display:inline-flex!important;width:100%;max-width:100%;align-items:center!important;padding:10px 12px!important;
+  margin-top:2px!important;gap:9px!important;background:#f7faf8!important;
+}
+.inventory-expense-question.compact input{width:14px!important;height:14px!important}
+.inventory-expense-question.compact>span{gap:2px}
+.inventory-expense-question.compact b{font-size:10px}
+.inventory-expense-question.compact small{font-size:8.5px}
+.ingredient-picker{
+  border:1px solid #dfe7e2;border-radius:13px;padding:14px;background:#fafcfb;
+  box-shadow:inset 0 1px 0 #fff;
+}
+.ingredient-picker>b{font-size:11px;color:#39463e;margin-bottom:10px}
+.ingredient-pick{
+  padding:10px 9px;border:1px solid #edf1ee;border-radius:9px;margin-top:7px;background:#fff;
+}
+.ingredient-pick:hover{border-color:#d3e0d8;background:#fafdFB}
+.check-label{gap:8px}
+.check-label input{accent-color:var(--accent);cursor:pointer}
+.ingredient-pick>input{border:1px solid #dce5df;border-radius:8px;background:#fff}
+.inventory-mode-tabs{width:100%}
+
+/* Sugerencias y formularios de clientes/proveedores */
+.party-fields{
+  margin:20px 0 5px;padding:16px;border:1px solid #dfe7e2;border-radius:14px;background:#f8faf9;
+}
+.party-fields-title{color:#39463e}
+.party-suggestions{border-color:#dfe7e2;border-radius:12px;box-shadow:0 18px 45px rgba(22,43,31,.13);padding:6px}
+.party-suggestions button{border-radius:8px}
+.party-suggestions button:hover{background:#edf6f0}
+
+/* Inventario / tarjetas resumen */
+.inventory-summary>div{
+  background:linear-gradient(135deg,#fff,#f7faf8);border-color:#e0e8e3;border-radius:12px;
+  box-shadow:0 4px 15px rgba(31,53,40,.035);
+}
+.inventory-summary>div:hover{border-color:#ccd9d1}
+.inventory-summary .warn-number{color:var(--expense)}
+.inventory-panel{border-radius:14px}
+
+/* Productos y costos */
+.recipe-intro{
+  background:linear-gradient(135deg,#f0f8f2,#e8f3eb);border-color:#d8e7dc;border-radius:14px;
+  box-shadow:0 5px 18px rgba(39,88,57,.045);
+}
+.recipe-toolbar{align-items:center}
+.recipe-grid{gap:18px}
+.recipe-card{border-radius:15px}
+.recipe-art{min-height:150px}
+.recipe-card-body{padding:17px}
+.margin-badge{background:var(--profit-soft);color:var(--profit);border:1px solid #d3eade}
+.recipe-metrics b{font-size:13px}
+.recipe-metrics .price-highlight{color:var(--income)}
+.recipe-cost-bar{background:#edf1ee}
+.recipe-cost-bar i{background:linear-gradient(90deg,#74a987,#3f805e)}
+.recipe-extra-metrics{border-color:#e7ede9}
+.recipe-extra-metrics b{color:#3d4b43}
+.recipe-card-footer{border-top-color:#e7ede9}
+.btn-small{border-color:#dce4df;border-radius:8px;background:#fff}
+.btn-small:hover{border-color:#9fc0ac;color:var(--accent);background:#f7fbf8}
+.recipe-delete:hover{color:var(--loss);border-color:#e6b9bd}
+
+/* Resumen y reportes */
+.report-kpi{border-radius:13px;padding:19px}
+.report-kpi>b{font-size:25px}
+.rank-row{border-bottom-color:#e7ede9}
+.rank-meter{background:#edf1ee}
+.rank-money b{font-size:12px}
+.loss-note{background:#fff5e9;border:1px solid #f1dfc8}
+.loss-total{font-size:30px}
+
+/* Accesibilidad / microinteracciones */
+button,input,select,textarea{font-family:inherit}
+button{transition:background .15s ease,border-color .15s ease,color .15s ease,box-shadow .15s ease,transform .15s ease}
+button:not(:disabled):active{transform:translateY(1px)}
+input::placeholder,textarea::placeholder{color:#a0aaa3}
+::selection{background:#cfe6d7;color:#244733}
+
+@media(max-width:760px){
+  .modal{padding:20px 17px;border-radius:18px}
+  .modal-head{padding-bottom:15px}
+  .modal-actions{gap:9px}
+  .form-grid{gap:14px}
+  .ingredient-picker{padding:11px}
+  .inventory-expense-question.compact{padding:9px 10px!important}
+}
+
+/* =========================================================
+   LEDGR · MODERN PRODUCT UI SYSTEM
+   Inspirado en patrones actuales de SaaS financiero:
+   superficies suaves, jerarquía clara, acciones agrupadas
+   y formularios orientados a tareas.
+   ========================================================= */
+
+:root{
+  --ui-bg:#f4f7f5;
+  --ui-surface:#ffffff;
+  --ui-surface-soft:#f8faf9;
+  --ui-border:#dfe7e2;
+  --ui-border-soft:#e9efeb;
+  --ui-text:#1f2a24;
+  --ui-muted:#738078;
+  --ui-accent:#2f7a56;
+  --ui-accent-2:#4d9670;
+  --ui-focus:rgba(47,122,86,.13);
+  --ui-shadow:0 10px 30px rgba(24,45,33,.055);
+  --ui-shadow-lg:0 24px 70px rgba(18,34,25,.16);
+  --ui-radius:16px;
+}
+
+/* App chrome */
+.page-content{padding-top:36px}
+.welcome-row{margin-bottom:24px}
+.welcome-row h1{font-size:32px;letter-spacing:-1.45px}
+.eyebrow{color:#728079;font-size:9px;letter-spacing:1.65px}
+.muted{color:#7b8780}
+.topbar{box-shadow:0 1px 0 rgba(31,48,38,.02)}
+.topbar-date{padding:7px 10px;border:1px solid var(--ui-border-soft);border-radius:999px;background:#fff}
+.nav-item{border-radius:11px}
+.nav-item.active{box-shadow:inset 0 0 0 1px rgba(47,122,86,.06)}
+.nav-item.active:before{left:-17px;width:4px}
+
+/* Primary surfaces */
+.panel,.stat-card,.recipe-card,.report-kpi,.movement-total-card{
+  border-radius:var(--ui-radius);
+  box-shadow:var(--ui-shadow);
+}
+.panel{overflow:hidden}
+.panel-heading h2{font-size:15px}
+.panel-heading .muted{font-size:10.5px}
+
+/* KPI / money hierarchy */
+.stat-card{padding:19px}
+.stat-value{font-size:26px}
+.period-summary{
+  border:1px solid var(--ui-border);
+  border-radius:20px;
+  background:linear-gradient(135deg,#fff 0%,#f9fbfa 100%);
+  box-shadow:var(--ui-shadow);
+}
+.period-summary-heading{padding:20px 22px 15px}
+.period-summary-values{gap:0;padding:0 10px 10px}
+.period-value{
+  padding:16px 18px;
+  border-radius:14px;
+  transition:.18s ease;
+}
+.period-value:hover{background:#f7faf8}
+.period-value strong{font-size:25px}
+.movement-totals{gap:14px}
+.movement-total-card{
+  padding:18px 20px;
+  position:relative;
+  overflow:hidden;
+}
+.movement-total-card:after{
+  content:"";
+  position:absolute;
+  width:90px;height:90px;
+  right:-34px;top:-42px;
+  border-radius:50%;
+  background:currentColor;
+  opacity:.035;
+}
+.movement-total-card span{font-size:10px;color:#748078}
+.movement-total-card b{font-size:22px;margin-top:8px}
+
+/* Tables become data lists instead of dense spreadsheets */
+.table-scroll{
+  border:1px solid var(--ui-border-soft);
+  background:#fff;
+}
+.data-table thead th{
+  background:#f8faf9;
+  padding-top:14px;
+  padding-bottom:12px;
+  font-size:8.5px;
+  letter-spacing:1px;
+}
+.data-table tbody td{
+  padding-top:14px;
+  padding-bottom:14px;
+}
+.data-table tbody tr:hover{background:#f7fbf8}
+.data-table tbody tr:last-child td{border-bottom:0}
+.category-pill,.status-pill{
+  border-radius:999px;
+  padding:5px 9px;
+}
+.ingredient-symbol,.transaction-icon{
+  border-radius:10px;
+}
+
+/* Toolbar: one clear action zone */
+.movement-toolbar,.recipe-toolbar{
+  padding:15px;
+  border:1px solid var(--ui-border-soft);
+  background:#f8faf9;
+  border-radius:14px;
+  margin-bottom:16px;
+}
+.movement-toolbar{border-bottom:1px solid var(--ui-border-soft)}
+.recipe-toolbar{display:flex;gap:10px}
+.search-box{
+  min-height:42px;
+  border-radius:11px;
+}
+.filter-tabs{
+  min-height:42px;
+  padding:4px;
+  border-radius:11px;
+}
+.filter-tabs button{
+  min-height:32px;
+  padding-inline:13px;
+}
+
+/* =========================================================
+   Forms · task-oriented modern layout
+   ========================================================= */
+.modal-scrim{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:28px;
+}
+.modal{
+  width:min(720px,100%);
+  max-height:calc(100vh - 56px);
+  overflow:auto;
+  scrollbar-width:thin;
+  background:rgba(255,255,255,.98);
+  border-radius:24px;
+  padding:28px;
+  box-shadow:var(--ui-shadow-lg);
+}
+.modal::-webkit-scrollbar{width:8px}
+.modal::-webkit-scrollbar-thumb{background:#cfdad3;border-radius:20px}
+.modal-head{
+  display:flex;
+  align-items:flex-start;
+  gap:14px;
+  position:sticky;
+  top:-28px;
+  z-index:2;
+  background:rgba(255,255,255,.97);
+  padding:2px 0 18px;
+  margin-bottom:22px;
+  backdrop-filter:blur(12px);
+}
+.modal-head>div{flex:1;min-width:0}
+.modal-head h2{
+  margin:0 0 5px;
+  font-size:23px;
+  letter-spacing:-.7px;
+}
+.modal-head .icon-button{
+  width:38px;height:38px;
+  border:1px solid var(--ui-border);
+  background:#f8faf9;
+  border-radius:11px;
+}
+.modal-head .icon-button:hover{background:#eef5f0;color:var(--ui-accent)}
+.modal form{display:grid;gap:0}
+.form-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:15px;
+  padding:4px;
+}
+.form-grid>label,
+.modal form>label{
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  gap:7px;
+  min-width:0;
+  color:#3f4d45;
+  font-size:10.5px;
+  font-weight:700;
+  line-height:1.35;
+}
+.form-grid>label.span-2{grid-column:1/-1}
+.form-grid>label::first-line{font-weight:700}
+.form-grid input,
+.form-grid select,
+.form-grid textarea,
+.modal form>label input,
+.modal form>label select,
+.modal form>label textarea{
+  width:100%;
+  min-height:44px;
+  border:1px solid #d8e2dc;
+  border-radius:11px;
+  background:#fbfcfb;
+  color:#25322b;
+  padding:11px 12px;
+  font-size:11px;
+  outline:0;
+  transition:border-color .16s,box-shadow .16s,background .16s,transform .16s;
+}
+.form-grid textarea,.modal form>label textarea{min-height:94px;resize:vertical}
+.form-grid input:hover,.form-grid select:hover,.form-grid textarea:hover,
+.modal form>label input:hover,.modal form>label select:hover,.modal form>label textarea:hover{
+  border-color:#c4d3ca;
+  background:#fff;
+}
+.form-grid input:focus,.form-grid select:focus,.form-grid textarea:focus,
+.modal form>label input:focus,.modal form>label select:focus,.modal form>label textarea:focus{
+  border-color:#6fa185;
+  box-shadow:0 0 0 4px var(--ui-focus);
+  background:#fff;
+}
+.form-grid input[type="number"]{font-variant-numeric:tabular-nums}
+.form-grid input[type="date"]{color-scheme:light}
+.form-grid select,.modal form>label select{
+  appearance:auto;
+  cursor:pointer;
+}
+
+/* Field helper text */
+.form-grid small,.modal form small{
+  display:block;
+  color:#7e8982;
+  font-size:9px;
+  line-height:1.5;
+  font-weight:500;
+}
+[data-tooltip]{position:relative}
+[data-tooltip]::after{
+  content:attr(data-tooltip);
+  position:absolute;
+  left:0;
+  bottom:calc(100% + 8px);
+  width:min(320px,90vw);
+  padding:9px 10px;
+  border-radius:9px;
+  background:#223029;
+  color:#fff;
+  font-size:9px;
+  font-weight:500;
+  line-height:1.45;
+  opacity:0;
+  pointer-events:none;
+  transform:translateY(4px);
+  transition:.15s ease;
+  box-shadow:0 10px 24px rgba(18,32,24,.18);
+  z-index:40;
+}
+[data-tooltip]:hover::after{opacity:1;transform:translateY(0)}
+
+/* Selectable options become modern cards */
+.type-switch,
+.inventory-mode-tabs{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:5px;
+  width:100%;
+  padding:4px;
+  border:1px solid #dfe8e2;
+  background:#f1f5f2;
+  border-radius:12px;
+}
+.type-switch button,
+.inventory-mode-tabs button{
+  min-height:40px;
+  border:1px solid transparent;
+  border-radius:9px;
+  background:transparent;
+  color:#6c7971;
+  font-size:10px;
+  font-weight:700;
+}
+.type-switch button.selected,
+.inventory-mode-tabs button.on{
+  background:#fff;
+  color:var(--ui-accent);
+  border-color:#dce8e0;
+  box-shadow:0 3px 10px rgba(28,57,40,.07);
+}
+
+/* Checkboxes: compact, aligned, not visually dominant */
+.check-label,
+.inventory-expense-question.compact,
+.inventory-purchase-toggle{
+  flex-direction:row!important;
+  align-items:flex-start!important;
+}
+.check-label{
+  padding:12px 13px!important;
+  border:1px solid #e0e8e3;
+  background:#f8faf9;
+  border-radius:11px;
+  font-weight:600!important;
+  color:#526057!important;
+}
+.check-label input,
+.inventory-expense-question.compact input,
+.inventory-purchase-toggle input{
+  flex:0 0 auto;
+  width:15px!important;
+  height:15px!important;
+  min-height:15px!important;
+  margin:1px 0 0!important;
+  padding:0!important;
+  accent-color:var(--ui-accent);
+}
+.inventory-expense-question.compact{
+  width:100%!important;
+  padding:10px 12px!important;
+  margin:0!important;
+  gap:9px!important;
+  border:1px solid #dfe8e2!important;
+  background:#f8fbf9!important;
+  border-radius:11px!important;
+}
+.inventory-expense-question.compact b{font-size:10px!important}
+.inventory-expense-question.compact small{font-size:8.5px!important}
+
+/* Inventory/product line items */
+.ingredient-picker{
+  padding:15px;
+  border:1px solid #dfe8e3;
+  border-radius:14px;
+  background:#f8faf9;
+}
+.ingredient-pick{
+  display:grid;
+  grid-template-columns:1fr auto;
+  align-items:center;
+  gap:10px;
+  padding:11px;
+  border:1px solid #e8eeea;
+  border-radius:10px;
+  background:#fff;
+  transition:.15s ease;
+}
+.ingredient-pick:hover{
+  border-color:#cbdcd1;
+  box-shadow:0 4px 14px rgba(30,58,42,.05);
+}
+.party-fields{
+  border-radius:14px;
+  background:#f8faf9;
+  box-shadow:inset 0 1px 0 #fff;
+}
+.party-suggestions{
+  border-radius:13px;
+  box-shadow:0 20px 50px rgba(18,35,26,.15);
+}
+
+/* Form footer */
+.modal-actions{
+  position:sticky;
+  bottom:-28px;
+  display:flex;
+  justify-content:flex-end;
+  gap:9px;
+  margin-top:24px;
+  padding:16px 0 0;
+  background:linear-gradient(180deg,rgba(255,255,255,0),rgba(255,255,255,.98) 28%);
+  border-top:1px solid #e7ede9;
+}
+.modal-actions button{
+  min-height:43px;
+  border-radius:11px;
+}
+.btn-primary{min-height:41px;border-radius:11px}
+.btn-secondary{min-height:41px;border-radius:11px}
+
+/* Products / costs */
+.recipe-card{
+  overflow:hidden;
+  background:#fff;
+}
+.recipe-art{background:#f1f5f2}
+.recipe-card-body{padding:19px}
+.recipe-title-row h2{font-size:16px}
+.recipe-metrics{
+  padding:12px 0;
+  border-top:1px solid #edf1ee;
+  border-bottom:1px solid #edf1ee;
+}
+.recipe-extra-metrics{background:#f8faf9;border-radius:11px;padding:10px}
+.recipe-card-footer{padding-top:13px}
+
+/* Empty states */
+.empty-state{
+  min-height:210px;
+  background:linear-gradient(180deg,#fff,#f9fbfa);
+  border-radius:14px;
+}
+.empty-state svg{color:#91a198}
+
+/* Better responsive form behavior */
+@media(max-width:760px){
+  .page-content{padding:22px 15px 18px}
+  .welcome-row{align-items:flex-start;flex-direction:column}
+  .welcome-row h1{font-size:27px}
+  .welcome-actions{width:100%;flex-wrap:wrap}
+  .welcome-actions button{flex:1}
+  .form-grid{grid-template-columns:1fr;gap:13px}
+  .form-grid>label.span-2{grid-column:auto}
+  .modal-scrim{padding:10px}
+  .modal{
+    width:100%;
+    max-height:calc(100vh - 20px);
+    padding:20px 16px;
+    border-radius:20px;
+  }
+  .modal-head{
+    top:-20px;
+    padding-top:2px;
+  }
+  .modal-head h2{font-size:20px}
+  .modal-actions{
+    bottom:-20px;
+    padding-bottom:4px;
+  }
+  .modal-actions button{flex:1}
+  .movement-toolbar,.recipe-toolbar{
+    flex-direction:column;
+    align-items:stretch;
+  }
+  .search-box{width:100%!important}
+  .filter-tabs{width:100%}
+  .filter-tabs button{flex:1}
+}

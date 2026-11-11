@@ -84,7 +84,7 @@ export default function Reports({ movements, recipes, ingredients }) {
           m.category || "",
           { value: Number(m.amount || 0), style: "money" },
           m.invoice || "",
-          m.method || "",
+          Array.isArray(m.method) ? m.method.join(", ") : (m.method || ""),
           m.channel || "",
         ].map((v) => (typeof v === "object" ? v : { value: v, style: "text" })),
       ),

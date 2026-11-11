@@ -282,7 +282,7 @@ export default function App() {
     }
   }
   async function addMovement(data) {
-    if (data.inventoryPurchase && data.party?.name?.trim()) {
+    if ((data.inventoryPurchase || data.inventoryConsumption?.length) && data.party?.name?.trim()) {
       const savedParty = await upsertParty(
         data.party,
         Number(data.amount || 0),
@@ -296,6 +296,57 @@ export default function App() {
         };
     }
     const purchase = data.inventoryPurchase;
+    const consumptionLines = Array.isArray(data.inventoryConsumption) ? data.inventoryConsumption : [];
+    if (!purchase && consumptionLines.length) {
+      try {
+        if (isDemo) {
+          const updates = [];
+          for (const line of consumptionLines) {
+            const item = ingredients.find(i => i.id === line.ingredientId);
+            const qty = Number(line.quantity);
+            if (!item || !(qty > 0) || qty > Number(item.stock || 0)) throw new Error(`Stock insuficiente para ${item?.name || "un insumo"}.`);
+            if (isCountUnit(item.unit) && !Number.isInteger(qty)) throw new Error(`La cantidad de ${item.name} debe ser entera.`);
+            updates.push({...item, stock: Number(item.stock || 0) - qty});
+          }
+          setIngredients(prev => prev.map(i => updates.find(u => u.id === i.id) || i));
+          const { inventoryConsumption: _consumption, ...savedData } = data;
+          const item = {...savedData, inventoryConsumption: consumptionLines, id: `movement-${Date.now()}`};
+          setMovements(prev => [item, ...prev]);
+          notify("Movimiento guardado e inventario descontado.");
+          return item;
+        }
+        if (!user || !firebaseConfigured) throw new Error("Iniciá sesión para guardar el movimiento.");
+        const { inventoryConsumption: _consumption, ...savedData } = data;
+        await runTransaction(db, async tx => {
+          const refs = consumptionLines.map(line => doc(db, "users", user.uid, "ingredients", line.ingredientId));
+          const snaps = [];
+          for (const ref of refs) snaps.push(await tx.get(ref));
+          const changes = snaps.map((snap, idx) => {
+            const line = consumptionLines[idx];
+            if (!snap.exists()) throw new Error(`El insumo ${line.ingredientName} ya no existe.`);
+            const item = snap.data(), qty = Number(line.quantity), stock = Number(item.stock || 0);
+            if (!(qty > 0) || qty > stock) throw new Error(`Stock insuficiente de ${item.name}. Disponible: ${stock} ${item.unit}.`);
+            if (isCountUnit(item.unit) && !Number.isInteger(qty)) throw new Error(`La cantidad de ${item.name} debe ser un número entero.`);
+            return {ref: refs[idx], item, line, next: stock - qty};
+          });
+          changes.forEach(({ref,item,next}) => tx.update(ref,{stock:next,updatedAt:serverTimestamp()}));
+          const movementRef = doc(collection(db,"users",user.uid,"movements"));
+          tx.set(movementRef,{...savedData,inventoryConsumption:consumptionLines,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
+          changes.forEach(({item,line}) => {
+            const ledgerRef = doc(collection(db,"users",user.uid,"stockMovements"));
+            tx.set(ledgerRef,{ingredientId:line.ingredientId,ingredientName:item.name,direction:"out",reason:"Consumo asociado a movimiento",quantity:Number(line.quantity),unit:item.unit,unitCost:Number(item.cost || 0),totalCost:Number(line.quantity)*Number(item.cost || 0),date:data.date || new Date().toISOString().slice(0,10),createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
+          });
+        });
+        const [ingredientSnap,movementSnap] = await Promise.all([getDocs(collection(db,"users",user.uid,"ingredients")),getDocs(query(collection(db,"users",user.uid,"movements"),orderBy("createdAt","desc")))]);
+        setIngredients(ingredientSnap.docs.map(d=>({id:d.id,...d.data()})));
+        setMovements(movementSnap.docs.map(d=>({id:d.id,...d.data()})));
+        notify("Movimiento guardado e inventario descontado correctamente.");
+        return data;
+      } catch(e) {
+        notify("No se pudo registrar el movimiento: " + e.message);
+        return null;
+      }
+    }
     if (!purchase) return save("movements", data);
     const today = data.date || new Date().toISOString().slice(0, 10);
     const normalized = String(purchase.name || "")

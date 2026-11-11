@@ -368,7 +368,7 @@ export default function Dashboard({
                         <div>
                           <b>{m.concept}</b>
                           <small>
-                            {m.invoice || m.method || "Sin comprobante"}
+                            {m.invoice || (Array.isArray(m.method) ? m.method.join(", ") : m.method) || "Sin comprobante"}
                           </small>
                         </div>
                       </div>

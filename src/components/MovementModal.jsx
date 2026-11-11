@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { X, PackagePlus } from "lucide-react";
 import { incomeCategories, expenseCategories } from "../data/categories";
 import PartyFields from "./PartyFields";
+import { isCountUnit } from "../utils/recipe";
 
 export default function MovementModal({
   onClose,
@@ -17,6 +18,11 @@ export default function MovementModal({
   const [quantity, setQuantity] = useState("1");
   const [unitCost, setUnitCost] = useState("");
   const [saving, setSaving] = useState(false);
+  const [inventoryUse, setInventoryUse] = useState([]);
+  const [otherPayment, setOtherPayment] = useState("");
+  const [otherCategory, setOtherCategory] = useState("");
+  const [otherChannel, setOtherChannel] = useState("");
+  const [paymentMethods, setPaymentMethods] = useState(["Transferencia"]);
   const [party, setParty] = useState({
     name: "",
     phone: "",
@@ -31,11 +37,13 @@ export default function MovementModal({
     amount: "",
     date: new Date().toISOString().slice(0, 10),
     invoice: "",
-    method: "Transferencia",
-    channel: "Otro",
+    method: ["Transferencia"],
+    channel: "Instagram",
     notes: "",
   });
   const update = (k, v) => setForm((p) => ({ ...p, [k]: v }));
+  const togglePayment = (value) => setPaymentMethods((p) => p.includes(value) ? p.filter(x => x !== value) : [...p, value]);
+  const toggleInventory = (item, checked) => setInventoryUse(p => checked ? [...p, { ingredientId: item.id, ingredientName: item.name, unit: item.unit, quantity: isCountUnit(item.unit) ? 1 : Math.min(100, Number(item.stock || 0)) }] : p.filter(x => x.ingredientId !== item.id));
   const selected = ingredients.find((i) => i.id === selectedId);
   const total = Number(quantity || 0) * Number(unitCost || 0);
   const categoryList = type === "income" ? incomeCategories : expenseCategories;
@@ -52,11 +60,17 @@ export default function MovementModal({
       if (itemMode === "existing" && !selected) return;
       if (itemMode === "new" && !newItem.name.trim()) return;
     } else if (!form.concept.trim() || Number(form.amount) <= 0) return;
+    if (!buyInventory && inventoryUse.some(x => !(Number(x.quantity) > 0))) return;
+    if (paymentMethods.length === 0) return;
+    if (paymentMethods.includes("Otro") && !otherPayment.trim()) return;
+    if (!buyInventory && (form.category === "Otro" || form.category.startsWith("Otros ")) && !otherCategory.trim()) return;
+    if (!buyInventory && type === "income" && form.channel === "Otro" && !otherChannel.trim()) return;
     setSaving(true);
     try {
       const data = buyInventory
         ? {
             ...form,
+            method: paymentMethods.map(x => x === "Otro" ? otherPayment.trim() : x),
             type: "expense",
             category: "Materia prima",
             concept: `Compra de inventario: ${itemMode === "existing" ? selected.name : newItem.name.trim()}`,
@@ -82,7 +96,7 @@ export default function MovementModal({
               totalCost: Number(total.toFixed(2)),
             },
           }
-        : { ...form, type, amount: Number(form.amount) };
+        : { ...form, type, amount: Number(form.amount), method: paymentMethods.map(x => x === "Otro" ? otherPayment.trim() : x), category: form.category === "Otro" ? otherCategory.trim() : form.category.startsWith("Otros ") ? `${form.category}: ${otherCategory.trim()}` : form.category, channel: form.channel === "Otro" ? otherChannel.trim() : form.channel, inventoryConsumption: inventoryUse.map(x => ({ ...x, quantity: Number(x.quantity) })) };
       data.party = {
         ...party,
         role: type === "income" && !buyInventory ? "customer" : "supplier",
@@ -270,21 +284,11 @@ export default function MovementModal({
               </label>
               <label>
                 Forma de pago
-                <select
-                  value={form.method}
-                  onChange={(e) => update("method", e.target.value)}
-                >
-                  {[
-                    "Transferencia",
-                    "Efectivo",
-                    "Débito",
-                    "Crédito",
-                    "Mercado Pago",
-                    "Otro",
-                  ].map((x) => (
-                    <option key={x}>{x}</option>
-                  ))}
-                </select>
+                <div className="multi-choice-list">
+                  {["Transferencia","Efectivo","Débito","Crédito","Mercado Pago","Otro"].map(x => <label className="check-label" key={x}><input type="checkbox" checked={paymentMethods.includes(x)} onChange={() => togglePayment(x)} />{x}</label>)}
+                </div>
+                {paymentMethods.includes("Otro") && <input required value={otherPayment} onChange={e => setOtherPayment(e.target.value)} placeholder="¿Cuál otra forma de pago?" />}
+                <small className="muted">Podés seleccionar más de una forma de pago.</small>
               </label>
               <label className="span-2">
                 N.º de factura / comprobante
@@ -352,32 +356,19 @@ export default function MovementModal({
               </label>
               <label>
                 Categoría
-                <select
-                  value={form.category}
-                  onChange={(e) => update("category", e.target.value)}
-                >
-                  {categoryList.map((x) => (
-                    <option key={x}>{x}</option>
-                  ))}
+                <select value={form.category} onChange={(e) => update("category", e.target.value)}>
+                  {categoryList.map((x) => <option key={x}>{x}</option>)}
+                  <option value="Otro">Otro</option>
                 </select>
+                {(form.category === "Otro" || form.category.startsWith("Otros ")) && <input required value={otherCategory} onChange={e => setOtherCategory(e.target.value)} placeholder="¿Cuál es la categoría?" />}
               </label>
               <label>
                 Forma de pago
-                <select
-                  value={form.method}
-                  onChange={(e) => update("method", e.target.value)}
-                >
-                  {[
-                    "Transferencia",
-                    "Efectivo",
-                    "Débito",
-                    "Crédito",
-                    "Mercado Pago",
-                    "Otro",
-                  ].map((x) => (
-                    <option key={x}>{x}</option>
-                  ))}
-                </select>
+                <div className="multi-choice-list">
+                  {["Transferencia","Efectivo","Débito","Crédito","Mercado Pago","Otro"].map(x => <label className="check-label" key={x}><input type="checkbox" checked={paymentMethods.includes(x)} onChange={() => togglePayment(x)} />{x}</label>)}
+                </div>
+                {paymentMethods.includes("Otro") && <input required value={otherPayment} onChange={e => setOtherPayment(e.target.value)} placeholder="¿Cuál otra forma de pago?" />}
+                <small className="muted">Podés seleccionar más de una forma de pago.</small>
               </label>
               {type === "income" && (
                 <label>
@@ -386,12 +377,9 @@ export default function MovementModal({
                     value={form.channel}
                     onChange={(e) => update("channel", e.target.value)}
                   >
-                    {["Instagram", "Web", "WhatsApp", "Presencial", "Otro"].map(
-                      (x) => (
-                        <option key={x}>{x}</option>
-                      ),
-                    )}
+                    {["Instagram", "Web", "WhatsApp", "Presencial", "Otro"].map((x) => <option key={x}>{x}</option>)}
                   </select>
+                  {form.channel === "Otro" && <input required value={otherChannel} onChange={e => setOtherChannel(e.target.value)} placeholder="¿Cuál es el canal?" />}
                 </label>
               )}
               <label className="span-2">
@@ -413,6 +401,16 @@ export default function MovementModal({
               </label>
             </div>
           )}
+          {!buyInventory && ingredients.length > 0 && <section className="span-2 inventory-consumption-picker">
+            <div><b>¿Utilizaste algo del inventario?</b><p className="muted">Seleccioná uno o varios insumos. Se descontarán al guardar este movimiento.</p></div>
+            {ingredients.map(item => {
+              const line = inventoryUse.find(x => x.ingredientId === item.id);
+              return <div className="inventory-consumption-row" key={item.id}>
+                <label className="check-label"><input type="checkbox" checked={!!line} disabled={Number(item.stock || 0) <= 0} onChange={e => toggleInventory(item,e.target.checked)} />{item.name} <small>· disponible: {item.stock} {item.unit}</small></label>
+                {line && <label className="inventory-consumption-qty">Cantidad ({item.unit})<input type="number" min={isCountUnit(item.unit) ? "1" : "0.01"} step={isCountUnit(item.unit) ? "1" : "0.01"} max={item.stock} value={line.quantity} onChange={e => setInventoryUse(p => p.map(x => x.ingredientId === item.id ? {...x,quantity:e.target.value} : x))} /></label>}
+              </div>
+            })}
+          </section>}
           <PartyFields
             role={type === "income" && !buyInventory ? "customer" : "supplier"}
             parties={parties}

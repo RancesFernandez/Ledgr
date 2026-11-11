@@ -24,7 +24,7 @@ service cloud.firestore {
       return request.resource.data.keys().hasOnly([
         'type', 'concept', 'category', 'amount', 'date', 'invoice', 'method',
         'notes', 'recipeId', 'quantity', 'estimatedCost', 'estimatedProfit', 'channel',
-        'party', 'partyId', 'partyRole', 'inventoryPurchase', 'createdAt', 'updatedAt'
+        'party', 'partyId', 'partyRole', 'inventoryPurchase', 'inventoryConsumption', 'createdAt', 'updatedAt'
       ])
       && request.resource.data.type in ['income', 'expense']
       && request.resource.data.concept is string
@@ -36,7 +36,7 @@ service cloud.firestore {
       && request.resource.data.date is string
       && request.resource.data.date.matches('^\\d{4}-\\d{2}-\\d{2}$')
       && (!('channel' in request.resource.data) || (request.resource.data.channel is string && request.resource.data.channel.size() <= 40))
-      && (!('method' in request.resource.data) || (request.resource.data.method is string && request.resource.data.method.size() <= 60))
+      && (!('method' in request.resource.data) || (request.resource.data.method is string && request.resource.data.method.size() <= 60) || (request.resource.data.method is list && request.resource.data.method.size() <= 10))
       && (!('notes' in request.resource.data) || (request.resource.data.notes is string && request.resource.data.notes.size() <= 2000))
       && (!('recipeId' in request.resource.data) || request.resource.data.recipeId is string)
       && (!('quantity' in request.resource.data) || (request.resource.data.quantity is number && request.resource.data.quantity > 0))
@@ -52,7 +52,7 @@ service cloud.firestore {
         && (!('taxId' in request.resource.data.party) || (request.resource.data.party.taxId is string && request.resource.data.party.taxId.size() <= 60))
         && (!('address' in request.resource.data.party) || (request.resource.data.party.address is string && request.resource.data.party.address.size() <= 240))
       ))
-      && (!('inventoryPurchase' in request.resource.data) || request.resource.data.inventoryPurchase is map);
+      && (!('inventoryPurchase' in request.resource.data) || request.resource.data.inventoryPurchase is map)\n      && (!('inventoryConsumption' in request.resource.data) || (request.resource.data.inventoryConsumption is list && request.resource.data.inventoryConsumption.size() <= 100));
     }
 
     function validIngredient(ingredientId) {

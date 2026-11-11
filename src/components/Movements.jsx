@@ -69,7 +69,7 @@ export default function Movements({ movements, onAdd }) {
           m.category || "",
           { value: Number(m.amount || 0), style: "money" },
           m.invoice || "",
-          m.method || "",
+          Array.isArray(m.method) ? m.method.join(", ") : (m.method || ""),
           m.channel || "",
         ].map((v) => (typeof v === "object" ? v : { value: v, style: "text" })),
       ),
@@ -199,7 +199,7 @@ export default function Movements({ movements, onAdd }) {
                   </td>
                   <td className="date-cell">{m.date}</td>
                   <td>{m.invoice || "—"}</td>
-                  <td>{m.method || "—"}</td>
+                  <td>{Array.isArray(m.method) ? m.method.join(", ") : (m.method || "—")}</td>
                   <td>{m.channel || "—"}</td>
                   <td className={`amount-cell align-right ${m.type}`}>
                     {m.type === "income" ? "+" : "−"}
@@ -286,7 +286,7 @@ export default function Movements({ movements, onAdd }) {
               </div>
               <div>
                 <span>Medio de pago</span>
-                <b>{selectedMovement.method || "—"}</b>
+                <b>{Array.isArray(selectedMovement.method) ? selectedMovement.method.join(", ") : (selectedMovement.method || "—")}</b>
               </div>
               <div>
                 <span>Comprobante</span>
@@ -316,6 +316,12 @@ export default function Movements({ movements, onAdd }) {
                   >
                     {money(selectedMovement.estimatedProfit)}
                   </b>
+                </div>
+              )}
+              {selectedMovement.inventoryConsumption?.length > 0 && (
+                <div className="span-2">
+                  <span>Insumos descontados del inventario</span>
+                  <b>{selectedMovement.inventoryConsumption.map(x => `${x.ingredientName}: ${x.quantity} ${x.unit}`).join(" · ")}</b>
                 </div>
               )}
               {selectedMovement.inventoryPurchase?.name && (
